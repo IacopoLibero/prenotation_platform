@@ -15,4 +15,4 @@ jobs:
         port: 21
         protocol: ftp
         username: superipetizioni
-        password: pvHPSqdb42p8
+        password: ${{ secrets.FTP_PASSWORD }}
