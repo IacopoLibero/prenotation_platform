@@ -6,7 +6,8 @@
     <title>Document</title>
 </head>
 <body>
-    ciao <?php echo $_SESSION['username']; ?>, benvenuto nella tua home
+    session_start();
+    ciao <?php echo $_SESSION['user']; ?>, benvenuto nella tua home
     <a href="login/logout.php">Logout</a>
 </body>
 </html>
