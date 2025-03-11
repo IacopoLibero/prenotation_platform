@@ -1,4 +1,7 @@
 <?php
+var_dump($_POST);
+die();
+
 session_start();
 include('../connessione.php'); // Assicurati che $conn sia la connessione MySQL
 
@@ -17,8 +20,7 @@ $result = $conn->query($checkQuery);
 
 if ($result->num_rows == 0) {
     // Query di inserimento diretta
-    $query = "INSERT INTO Users (username, email, password, is_teacher) 
-              VALUES ('$username', '$email', '$password', $professore)";
+    $query = "INSERT INTO Users (username, email, password, is_teacher) VALUES ('$username', '$email', '$password', $professore)";
 
     if ($conn->query($query)) {
         $_SESSION['status_reg'] = "Registrazione effettuata con successo!";
