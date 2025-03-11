@@ -18,13 +18,13 @@
     $password = hash("sha256", $password);
 
     // Controllo se l'Utente è già registrato
-    $checkQuery = "SELECT * FROM Users WHERE email = '$email'";
+    $checkQuery = "SELECT * FROM `Users` WHERE email = '$email'";
     $result = $conn->query($checkQuery);
 
     // Se non è registrato lo inserisco nel database, altrimenti mostro un errore
     if($result->num_rows == 0)
     {
-        $query = "INSERT INTO Users (username,mail,password,is_teacher) VALUES ('$username','$mail','$password','$professore')";
+        $query = "INSERT INTO `Users`(`username`, `email`, `password`, `is_teacher`) VALUES ('$username','$mail','$password','$professore')";
         if ($conn->query($query)) 
         {
             $_SESSION['status_reg'] = "Registrazione effettuata";

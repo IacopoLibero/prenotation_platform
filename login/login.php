@@ -11,7 +11,7 @@ $_SESSION['log'] = false;
 $_SESSION['user'] = "";
 $_SESSION['pass']=$passw;
 // Verifica se l'username esiste nel database
-$checkQuery = "SELECT * FROM Users WHERE email = '$mail'";
+$checkQuery = "SELECT * FROM `Users` WHERE email = '$mail'";
 $result = $conn->query($checkQuery);
 
 if ($result->num_rows > 0) 
