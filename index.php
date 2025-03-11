@@ -14,18 +14,19 @@
   <body>
     <div class="container" id="container">
       <div class="form-container sign-up">
-        <form action="/login/script_registrazione.php" method="POST">
+      <form action="/login/script_registrazione.php" method="POST">
           <h1>Create Account</h1>
+          <input type="text" name="Username" placeholder="Username" required />
+          <input type="email" name="Email" placeholder="Email" required />
+          <input type="password" name="Password" placeholder="Password" required />
           
-          <input type="text" placeholder="Username" />
-          <input type="email" placeholder="Email" />
-          <input type="password" placeholder="Password" />
           <div class="checkbox-container">
-            <input type="checkbox" id="professore"/>
+            <input type="checkbox" name="professore" id="professore"/>
             <label for="professore">I'm a professor</label>
           </div>
+          
           <button type="submit">Sign up</button>
-        </form>
+      </form>
         <?php
           session_start();
           if(isset($_SESSION['status_reg']))
@@ -47,8 +48,8 @@
       <div class="form-container sign-in">
         <form action="./login/login.php" method="POST">
           <h1>Sign In</h1>
-          <input type="email" placeholder="Email" />
-          <input type="password" placeholder="Password" />
+          <input type="email" name="Email" placeholder="Email" />
+          <input type="password" name="Password" placeholder="Password" />
           <a href="#">Forget Your Password?</a>
           <button type="submit">Sig in</button>
         </form>
