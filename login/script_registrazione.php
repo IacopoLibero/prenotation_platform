@@ -4,7 +4,7 @@
 
     $username =htmlspecialchars( $_POST['Username']);
     $email = htmlspecialchars($_POST['Email']);
-    $password = htmlspecialchars($_POST['Password']);
+    $password = $_POST['Password'];
     
     $professore= $_POST['professore'];
     if(isset($professore) && $professore == "on")
@@ -25,7 +25,7 @@
     // Se non è registrato lo inserisco nel database, altrimenti mostro un errore
     if($result->num_rows == 0)
     {
-        $query = "INSERT INTO `Users`(`username`, `email`, `password`, `is_teacher`) VALUES ($username,$email,$password,$professore)";
+        $query = "INSERT INTO `Users`(`username`, `email`, `password`, `is_teacher`) VALUES ('$username','$mail','$password',$professore)";
         if ($conn->query($query)) 
         {
             $_SESSION['status_reg'] = "Registrazione effettuata";
