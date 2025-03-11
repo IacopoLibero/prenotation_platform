@@ -14,6 +14,5 @@
 <body>
     
     ciao <?php echo $_SESSION['user']; ?>, benvenuto nella tua home
-    <a href="login/logout.php">Logout</a>
 </body>
 </html>
