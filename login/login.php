@@ -1,42 +1,50 @@
 <?php
+include('../connessione.php');  // Include il file di connessione per utilizzare $conn
 
-include('../connessione.php');  // Questo include il file di connessione in modo da poter utilizzare $conn in questa pagina
 session_start();
-$mail = htmlspecialchars($_POST['Email']);
-$password =htmlspecialchars($_POST['Password']);
-$passw = hash("sha256",$password);
+
+// Recupero e sanificazione dei dati
+$mail = trim(htmlspecialchars($_POST['Email']));
+$password = $_POST['Password'];
 
 // Imposta il login a false e l'utente a vuoto
 $_SESSION['log'] = false;
 $_SESSION['user'] = "";
-$_SESSION['pass']=$passw;
-// Verifica se l'username esiste nel database
-$checkQuery = "SELECT * FROM `Users` WHERE email = '$mail'";
-$result = $conn->query($checkQuery);
+$_SESSION['pass'] = $password; // Non hashare la password prima di verificarla
 
-if ($result->num_rows > 0) 
-{
+// Query preparata per verificare se l'utente esiste
+$checkQuery = "SELECT * FROM `Users` WHERE email = ?";
+$stmt = $conn->prepare($checkQuery);
+$stmt->bind_param("s", $mail);
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Verifica se l'utente esiste nel database
+if ($result->num_rows > 0) {
     // Ottieni la riga dell'utente
     $row = $result->fetch_assoc();
-    // Verifica se la password è corretta
-    if ($row['password']== $passw) 
-    {
-        // Reindirizza alla pagina home se la password è corretta
+
+    // Verifica se la password è corretta utilizzando password_verify
+    if (password_verify($password, $row['password'])) {
+        // Salva il login e l'utente nella sessione
         $_SESSION['log'] = true;
-        $_SESSION['user'] = $username;
+        $_SESSION['user'] = $row['username'];
         header("Location: ../front-end/home.php");
-    }
-    else 
-    {
-        // Imposta il messaggio di stato e reindirizza alla pagina di indice se la password è incorretta
+        exit();
+    } else {
+        // Imposta il messaggio di errore e reindirizza
         $_SESSION['status'] = "Password errata";
-        header("Location: ..\index.php");
+        header("Location: ../index.php");
+        exit();
     }
-}
-else 
-{
-    // Imposta il messaggio di stato e reindirizza alla pagina di indice se l'username non viene trovato
+} else {
+    // Imposta il messaggio di errore e reindirizza
     $_SESSION['status'] = "Email non registrata";
-    header("Location: ..\index.php");
+    header("Location: ../index.php");
+    exit();
 }
+
+// Chiudi la connessione
+$stmt->close();
+$conn->close();
 ?>
