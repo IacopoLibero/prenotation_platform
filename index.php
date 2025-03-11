@@ -24,8 +24,7 @@
             <input type="checkbox" id="professore"/>
             <label for="professore">I'm a professor</label>
           </div>
-          
-          <input class="belbottone" type="submit" value="Sign Up"/>
+          <button type="submit">Sign up</button>
         </form>
         <?php
           session_start();
@@ -51,7 +50,7 @@
           <input type="email" placeholder="Email" />
           <input type="password" placeholder="Password" />
           <a href="#">Forget Your Password?</a>
-          <input class="belbottone" type="submit" value="Sign In"/>
+          <button type="submit">Sig in</button>
         </form>
         <?php
           session_start();
