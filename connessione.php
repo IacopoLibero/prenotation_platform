@@ -12,10 +12,14 @@
     $dbname = "mercatino";
     */
     
-    mysqli_report(MYSQLI_REPORT_OFF);  // Serve a disabilitare le eccezioni nelle nuove versioni di PHP
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);  // Abilita le eccezioni per il debug
 
     // Creazione della connessione al database
-    $conn = new mysqli($servername, $username, $password, $dbname);
+    try {
+        $conn = new mysqli($servername, $username, $password, $dbname);
+    } catch (mysqli_sql_exception $e) {
+        die("Connection failed: " . $e->getMessage());
+    }
 
     // Controllo della connessione
     if ($conn->connect_error) {
