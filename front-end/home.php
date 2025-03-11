@@ -1,3 +1,9 @@
+<?php
+    session_start();
+    if(!isset($_SESSION['user'])){
+        header('Location: ../index.php');
+    }
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +12,7 @@
     <title>Document</title>
 </head>
 <body>
-    session_start();
+    
     ciao <?php echo $_SESSION['user']; ?>, benvenuto nella tua home
     <a href="login/logout.php">Logout</a>
 </body>
