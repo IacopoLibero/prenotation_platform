@@ -142,14 +142,19 @@ $result = $stmt->get_result();
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
+            overflow-y: auto; /* Allow scrolling on the modal overlay */
+            padding: 20px 0;
         }
         .modal-content {
             background-color: white;
-            margin: 10% auto;
+            margin: 3% auto;
             padding: 20px;
             width: 70%;
             max-width: 600px;
+            max-height: 80vh; /* Limit height to 80% of viewport */
+            overflow-y: auto; /* Enable scrolling for modal content */
             border-radius: 8px;
+            position: relative;
         }
         .close-modal {
             float: right;
