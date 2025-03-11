@@ -12,7 +12,11 @@ $professore = isset($_POST['professore']) ? 1 : 0; // Converti il checkbox in 0 
 $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
 // Controllo se l'utente è già registrato con Prepared Statement
-$checkQuery = "SELECT email FROM Users WHERE email = ?";
+if ($professore) {
+    $checkQuery = "SELECT email FROM Professori WHERE email = ?";
+} else {
+    $checkQuery = "SELECT email FROM Studenti WHERE email = ?";
+}
 $stmt = $conn->prepare($checkQuery);
 $stmt->bind_param("s", $email);
 $stmt->execute();
@@ -20,9 +24,13 @@ $result = $stmt->get_result();
 
 if ($result->num_rows == 0) {
     // Query di inserimento sicura
-    $query = "INSERT INTO Users (username, email, password, is_teacher) VALUES (?, ?, ?, ?)";
+    if ($professore) {
+        $query = "INSERT INTO Professori (username, email, password) VALUES (?, ?, ?)";
+    } else {
+        $query = "INSERT INTO Studenti (username, email, password) VALUES (?, ?, ?)";
+    }
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("sssi", $username, $email, $passwordHash, $professore);
+    $stmt->bind_param("sss", $username, $email, $passwordHash);
 
     if ($stmt->execute()) {
         $_SESSION['status_reg'] = "Registrazione effettuata con successo!";

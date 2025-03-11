@@ -13,9 +13,9 @@ $_SESSION['user'] = "";
 $_SESSION['pass'] = $password; // Non hashare la password prima di verificarla
 
 // Query preparata per verificare se l'utente esiste
-$checkQuery = "SELECT * FROM `Users` WHERE email = ?";
+$checkQuery = "SELECT * FROM `Professori` WHERE email = ? UNION SELECT * FROM `Studenti` WHERE email = ?";
 $stmt = $conn->prepare($checkQuery);
-$stmt->bind_param("s", $mail);
+$stmt->bind_param("ss", $mail, $mail);
 $stmt->execute();
 $result = $stmt->get_result();
 
