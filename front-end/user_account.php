@@ -39,7 +39,7 @@
         
         <section class="account-info">
             <h2>Informazioni Personali</h2>
-            <form action="../update_account.php" method="POST">
+            <form action="../api/update_account.php" method="POST">
                 <div class="form-group">
                     <label for="username">Username:</label>
                     <input type="text" id="username" name="username" value="<?php echo $_SESSION['user']; ?>" required>
@@ -54,6 +54,18 @@
                     <label for="password">Password (lascia vuoto per mantenere la password attuale):</label>
                     <input type="password" id="password" name="password">
                 </div>
+                
+                <?php if($isTeacher): ?>
+                <div class="form-group">
+                    <label for="materie">Materie insegnate:</label>
+                    <input type="text" id="materie" name="materie" value="<?php echo isset($_SESSION['materie']) ? $_SESSION['materie'] : ''; ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label for="bio">Biografia:</label>
+                    <textarea id="bio" name="bio"><?php echo isset($_SESSION['bio']) ? $_SESSION['bio'] : ''; ?></textarea>
+                </div>
+                <?php endif; ?>
                 
                 <button type="submit" class="btn-update">Aggiorna Profilo</button>
             </form>

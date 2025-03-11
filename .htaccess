@@ -1,0 +1,28 @@
+# Impedisci la visualizzazione del contenuto delle directory
+Options -Indexes
+
+# Protezione dei file sensibili
+<FilesMatch "^\.ht|\.env|composer\.json|composer\.lock|package\.json|package-lock\.json|README\.md|DB\.sql">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Gestione degli errori personalizzati
+ErrorDocument 404 /error/404.php
+ErrorDocument 403 /error/403.php
+ErrorDocument 500 /error/500.php
+
+# Imposta charset di default
+AddDefaultCharset UTF-8
+
+# Abilita CORS per alcune risorse specifiche
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|jpg|png|gif|ico|svg|woff|woff2|ttf|eot)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+# Abilitare la compressione Gzip se disponibile
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript application/json
+</IfModule>

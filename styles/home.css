@@ -37,6 +37,7 @@ nav {
 nav ul {
     list-style: none;
     display: flex;
+    flex-wrap: wrap;
 }
 
 nav ul li {
@@ -109,6 +110,7 @@ nav ul li a:hover {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
+    margin-bottom: 3rem;
 }
 
 .dashboard-card {
@@ -147,6 +149,49 @@ nav ul li a:hover {
 
 .dashboard-card a:hover {
     color: #1a7f85;
+}
+
+/* Quick Help Section */
+.quick-help {
+    background: white;
+    border-radius: 10px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.quick-help h3 {
+    color: #2da0a8;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.help-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.help-content p {
+    margin-bottom: 1rem;
+}
+
+.help-content ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.help-content li {
+    margin-bottom: 0.5rem;
+}
+
+.help-content a {
+    color: #2da0a8;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.help-content a:hover {
+    text-decoration: underline;
 }
 
 /* Footer */
