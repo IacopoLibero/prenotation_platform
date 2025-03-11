@@ -25,7 +25,7 @@
     // Se non è registrato lo inserisco nel database, altrimenti mostro un errore
     if($result->num_rows == 0)
     {
-        $query = "INSERT INTO `Users`(`username`, `email`, `password`, `is_teacher`) VALUES ('$username','$mail','$password',$professore)";
+        $query = "INSERT INTO `Users`(`username`, `email`, `password`, `is_teacher`) VALUES ('$username','$email','$password',$professore)";
         if ($conn->query($query)) 
         {
             $_SESSION['status_reg'] = "Registrazione effettuata";
