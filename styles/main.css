@@ -1,0 +1,64 @@
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+header {
+    background-color: #2da0a8;
+    color: white;
+    padding: 1rem;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: space-around;
+}
+
+nav ul li {
+    margin: 0 1rem;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+.welcome {
+    background: linear-gradient(to right, #5c6bc0, #2da0a8);
+    color: white;
+    text-align: center;
+    padding: 5rem 1rem;
+}
+
+.account {
+    padding: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.account form {
+    display: flex;
+    flex-direction: column;
+}
+
+.account form label {
+    margin: 0.5rem 0;
+}
+
+.account form input {
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+footer {
+    background-color: #2da0a8;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}

@@ -9,10 +9,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <title>Home</title>
 </head>
 <body>
-    
-    ciao <?php echo $_SESSION['user']; ?>, benvenuto nella tua home
+    <header>
+        <nav>
+            <ul>
+                <li><a href="home.php">Home</a></li>
+                <li><a href="user_account.php">Account</a></li>
+                <li><a href="../login/logout.php">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section class="welcome">
+            <h1>Benvenuto, <?php echo $_SESSION['user']; ?>!</h1>
+            <p>Gestisci le tue lezioni in modo semplice e veloce.</p>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2023 Programma Lezioni. Tutti i diritti riservati.</p>
+    </footer>
 </body>
 </html>
