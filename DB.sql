@@ -11,13 +11,13 @@ CREATE TABLE Lezioni (
 CREATE TABLE Studenti (
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE PRIMARY KEY,
-    password VARCHAR(255) NOT NULL, -- Password hash con BCRYPT
+    password VARCHAR(255) NOT NULL 
 );
 
 CREATE TABLE Professori (
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE PRIMARY KEY,
-    password VARCHAR(255) NOT NULL, -- Password hash con BCRYPT
+    password VARCHAR(255) NOT NULL 
 );
 
 -- Example of inserting a user without specifying is_teacher

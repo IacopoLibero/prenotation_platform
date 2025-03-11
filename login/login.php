@@ -13,7 +13,7 @@ $_SESSION['user'] = "";
 $_SESSION['pass'] = $password; // Non hashare la password prima di verificarla
 
 // Query preparata per verificare se l'utente esiste
-$checkQuery = "SELECT * FROM `Professori` WHERE email = ? UNION SELECT * FROM `Studenti` WHERE email = ?";
+$checkQuery = "SELECT *, 'professore' as tipo FROM `Professori` WHERE email = ? UNION SELECT *, 'studente' as tipo FROM `Studenti` WHERE email = ?";
 $stmt = $conn->prepare($checkQuery);
 $stmt->bind_param("ss", $mail, $mail);
 $stmt->execute();
@@ -29,6 +29,8 @@ if ($result->num_rows > 0) {
         // Salva il login e l'utente nella sessione
         $_SESSION['log'] = true;
         $_SESSION['user'] = $row['username'];
+        $_SESSION['email'] = $row['email'];
+        $_SESSION['tipo'] = $row['tipo']; // Salva il tipo di utente (professore o studente)
         header("Location: ../front-end/home.php");
         exit();
     } else {
