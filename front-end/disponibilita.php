@@ -126,6 +126,20 @@ $giorni = [
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
+        .google-calendar-btn {
+            display: block;
+            margin: 20px 0;
+            padding: 10px 15px;
+            background-color: #4285F4;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .google-calendar-btn:hover {
+            background-color: #3367D6;
+        }
     </style>
 </head>
 <body>
@@ -137,6 +151,7 @@ $giorni = [
                 <li><a href="user_account.php">Account</a></li>
                 <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
                 <li><a href="disponibilita.php">Disponibilità</a></li>
+                <li><a href="google_calendar_setup.php">Google Calendar</a></li>
                 <li><a href="../login/logout.php">Logout</a></li>
             </ul>
         </nav>
@@ -146,6 +161,10 @@ $giorni = [
         <section>
             <h1>Imposta Disponibilità</h1>
             <p>Configura gli orari in cui sei disponibile per tenere lezioni</p>
+            
+            <a href="google_calendar_setup.php" class="google-calendar-btn">
+                Sincronizza con Google Calendar
+            </a>
             
             <div class="availability-section">
                 <div class="form-container">
