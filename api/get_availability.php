@@ -45,6 +45,11 @@ $stmt->execute();
 $result = $stmt->get_result();
 $teacherInfo = $result->fetch_assoc();
 
+// Log per debug
+error_log("API get_availability.php - Teacher: $teacher_email, Has Calendar: " . 
+          (!empty($teacherInfo['google_calendar_link']) ? 'Yes' : 'No') . 
+          ", Availability count: " . count($availability));
+
 header('Content-Type: application/json');
 echo json_encode([
     'success' => true, 

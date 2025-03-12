@@ -165,9 +165,22 @@ $result = $stmt->get_result();
                 return;
             }
             
+            // Mostra un messaggio di caricamento
+            document.getElementById('availabilityContainer').innerHTML = `
+                <div class="no-availability">
+                    <p>Caricamento disponibilità in corso...</p>
+                </div>
+            `;
+            
             fetch(`../api/get_availability.php?email=${encodeURIComponent(teacherEmail)}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Errore nella risposta del server');
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log("Dati ricevuti:", data); // Debug
                     const container = document.getElementById('availabilityContainer');
                     
                     if (data.success && data.availability && data.availability.length > 0) {
@@ -212,18 +225,28 @@ $result = $stmt->get_result();
                         
                         container.innerHTML = html;
                     } else {
-                        container.innerHTML = `
-                            <div class="no-availability">
-                                <p>Questo insegnante non ha ancora impostato la sua disponibilità.</p>
-                            </div>
-                        `;
+                        // Messaggio personalizzato in base a se l'insegnante usa Google Calendar o meno
+                        if (data.uses_google_calendar) {
+                            container.innerHTML = `
+                                <div class="no-availability">
+                                    <p>Questo insegnante utilizza Google Calendar ma non ha ancora disponibilità sincronizzate.</p>
+                                    <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
+                                </div>
+                            `;
+                        } else {
+                            container.innerHTML = `
+                                <div class="no-availability">
+                                    <p>Questo insegnante non ha ancora impostato la sua disponibilità.</p>
+                                </div>
+                            `;
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     document.getElementById('availabilityContainer').innerHTML = `
                         <div class="no-availability">
-                            <p>Si è verificato un errore durante il recupero della disponibilità.</p>
+                            <p>Si è verificato un errore durante il recupero della disponibilità: ${error.message}</p>
                         </div>
                     `;
                 });

@@ -248,10 +248,12 @@ function is_slot_occupied($date, $slot, $events) {
 // Funzione per salvare le disponibilità nel database
 function save_availability($conn, $teacher_email, $availability) {
     if (empty($availability)) {
+        error_log("Nessuna disponibilità da salvare per $teacher_email");
         return true; // Nessuna disponibilità da salvare
     }
     
     $success = true;
+    error_log("Salvataggio di " . count($availability) . " disponibilità per $teacher_email");
     
     // Prepara la query di inserimento
     $query = "INSERT INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
@@ -268,27 +270,27 @@ function save_availability($conn, $teacher_email, $availability) {
         );
         
         if (!$stmt->execute()) {
+            error_log("Errore nell'inserimento della disponibilità: " . $stmt->error);
             $success = false;
-            break;
-        }
-        
-        // Crea anche la lezione corrispondente
-        $lesson_query = "INSERT INTO Lezioni 
-                        (teacher_email, giorno_settimana, ora_inizio, ora_fine, data, stato) 
-                        VALUES (?, ?, ?, ?, ?, 'disponibile')";
-        $lesson_stmt = $conn->prepare($lesson_query);
-        $lesson_stmt->bind_param(
-            "sssss", 
-            $teacher_email, 
-            $slot['giorno_settimana'], 
-            $slot['ora_inizio'], 
-            $slot['ora_fine'], 
-            $slot['data']
-        );
-        
-        if (!$lesson_stmt->execute()) {
-            $success = false;
-            break;
+        } else {
+            // Crea anche la lezione corrispondente
+            $lesson_query = "INSERT INTO Lezioni 
+                            (teacher_email, giorno_settimana, ora_inizio, ora_fine, data, stato) 
+                            VALUES (?, ?, ?, ?, ?, 'disponibile')";
+            $lesson_stmt = $conn->prepare($lesson_query);
+            $lesson_stmt->bind_param(
+                "sssss", 
+                $teacher_email, 
+                $slot['giorno_settimana'], 
+                $slot['ora_inizio'], 
+                $slot['ora_fine'], 
+                $slot['data']
+            );
+            
+            if (!$lesson_stmt->execute()) {
+                error_log("Errore nell'inserimento della lezione: " . $lesson_stmt->error);
+                $success = false;
+            }
         }
     }
     
