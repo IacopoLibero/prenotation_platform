@@ -7,7 +7,8 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
     />
-    <link rel="stylesheet" href="./login/style_login.css" />
+    <!-- Add cache busting parameter to ensure latest CSS is loaded -->
+    <link rel="stylesheet" href="./login/style_login.css?v=<?php echo time(); ?>" />
     <title>Login</title>
   </head>
 
@@ -94,7 +95,9 @@
       </div>
     </div>
 
-    <!-- Use only one script file -->
-    <script src="./login/script_login.js"></script>
+    <!-- Add cache busting parameter to ensure latest JS is loaded -->
+    <script src="./login/script_login.js?v=<?php echo time(); ?>"></script>
+    
+    <!-- Remove reference to mobile_login.js since functionality is now in script_login.js -->
   </body>
 </html>
