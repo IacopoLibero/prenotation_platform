@@ -15,7 +15,7 @@ $_SESSION['pass'] = $password; // Non hashare la password prima di verificarla
 // Query preparata per verificare se l'utente esiste
 $checkQuery = "SELECT *, 'professore' as tipo FROM `Professori` WHERE email = ? 
               UNION 
-              SELECT *, NULL as bio, NULL as materie, 'studente' as tipo FROM `Studenti` WHERE email = ?";
+              SELECT *, NULL as bio, NULL as materie, NULL as google_calendar_link, NULL as google_calendar_id, 'studente' as tipo FROM `Studenti` WHERE email = ?";
 $stmt = $conn->prepare($checkQuery);
 $stmt->bind_param("ss", $mail, $mail);
 $stmt->execute();
