@@ -214,45 +214,135 @@ body{
     .container {
         min-height: 500px;
         width: 100%;
+        perspective: 1200px; /* Increase perspective for more dramatic 3D effect */
     }
     
     .toggle-container {
         display: none;
     }
     
-    /* Revised form positioning with fade transitions */
+    /* Revised form positioning with dramatic paper-lifting transition */
     .form-container {
         position: absolute;
         top: 0;
         left: 0;
         height: 100%;
         width: 100%;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.5s ease, visibility 0.5s ease;
+        backface-visibility: hidden;
+        transform-origin: center bottom; /* Set transform origin to bottom for paper-like effect */
+        transition: none; /* We'll use animations instead of transitions */
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        background: white;
+        border-radius: 30px;
+        overflow: hidden;
     }
     
-    /* Sign-in is visible by default */
+    /* Default positioning */
     .sign-in {
-        opacity: 1;
-        visibility: visible;
         z-index: 2;
+        transform: translateY(0) rotateX(0);
     }
     
-    /* When container is active, reverse the visibility with fade */
-    .container.active .sign-in {
-        opacity: 0;
-        visibility: hidden;
+    .sign-up {
         z-index: 1;
+        transform: translateY(0) rotateX(0);
+        opacity: 0;
     }
     
-    .container.active .sign-up {
-        opacity: 1;
-        visibility: visible;
+    /* Custom animation sequences for complete paper-lifting effect */
+    @keyframes liftAndHide {
+        0% { 
+            transform: translateY(0) rotateX(0); 
+            z-index: 2; 
+            opacity: 1;
+        }
+        40% { 
+            transform: translateY(-120%) rotateX(10deg); /* Lift completely out of view */
+            z-index: 2;
+            opacity: 1;
+            box-shadow: 0 50px 50px rgba(0,0,0,0.2);
+        }
+        50% { 
+            transform: translateY(-120%) rotateX(10deg); /* Hold at the top position */
+            z-index: 1;
+            opacity: 0.8;
+        }
+        65% { 
+            transform: translateY(-80%) rotateX(5deg) translateZ(-100px);
+            opacity: 0.6;
+            z-index: 1;
+        }
+        100% { 
+            transform: translateY(0) rotateX(0) translateZ(-50px);
+            z-index: 1;
+            opacity: 0;
+        }
+    }
+    
+    @keyframes revealFromBelow {
+        0% { 
+            transform: translateY(0) rotateX(0) translateZ(-50px); 
+            z-index: 1; 
+            opacity: 0;
+        }
+        40% { 
+            opacity: 0.6;
+            z-index: 1;
+        }
+        50% { 
+            opacity: 0.8;
+            z-index: 2;
+        }
+        100% { 
+            transform: translateY(0) rotateX(0) translateZ(0); 
+            z-index: 2;
+            opacity: 1;
+        }
+    }
+    
+    /* Apply animations when switching between forms */
+    .container.animating .sign-in.hiding {
+        animation: liftAndHide 1s forwards cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    
+    .container.animating .sign-up.revealing {
+        animation: revealFromBelow 1s forwards cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    
+    .container.animating .sign-up.hiding {
+        animation: liftAndHide 1s forwards cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    
+    .container.animating .sign-in.revealing {
+        animation: revealFromBelow 1s forwards cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    
+    /* Final states without animation */
+    .container:not(.animating).active .sign-in {
+        z-index: 1;
+        opacity: 0;
+        transform: translateY(0) rotateX(0) translateZ(-50px);
+    }
+    
+    .container:not(.animating).active .sign-up {
         z-index: 2;
+        opacity: 1;
+        transform: translateY(0) rotateX(0) translateZ(0);
     }
     
-    /* Text links instead of buttons for mobile switching */
+    .container:not(.animating):not(.active) .sign-up {
+        z-index: 1;
+        opacity: 0;
+        transform: translateY(0) rotateX(0) translateZ(-50px);
+    }
+    
+    .container:not(.animating):not(.active) .sign-in {
+        z-index: 2;
+        opacity: 1;
+        transform: translateY(0) rotateX(0) translateZ(0);
+    }
+    
+    /* Text links */
     .mobile-switch {
         position: absolute;
         bottom: 30px;
@@ -282,45 +372,7 @@ body{
     
     /* More vertical space for mobile forms */
     .container form {
-        padding: 20px;
         padding-bottom: 80px; /* Add space for the text links at bottom */
-        max-width: 100%;
-    }
-    
-    /* Mobile switch buttons - ensure they're visible */
-    .mobile-switch {
-        position: absolute;
-        bottom: 30px;
-        left: 0;
-        display: flex;
-        width: 100%;
-        justify-content: center;
-        padding: 0 20px;
-        z-index: 10;
-    }
-    
-    .mobile-switch button {
-        background-color: #2da0a8;
-        color: white;
-        border: none;
-        padding: 12px 30px;
-        font-size: 14px;
-        font-weight: bold;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        width: 100%;
-        max-width: 200px;
-    }
-    
-    .mobile-switch button:hover {
-        background-color: #238e95;
-    }
-    
-    /* More vertical space for mobile forms */
-    .container form {
-        padding: 20px;
-        padding-bottom: 80px; /* Add space for the buttons at bottom */
         max-width: 100%;
     }
     
