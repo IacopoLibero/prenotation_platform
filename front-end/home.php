@@ -147,5 +147,8 @@
     <footer>
         <p>&copy; 2023 Programma Lezioni. Tutti i diritti riservati.</p>
     </footer>
+    
+    <!-- Add JavaScript fix -->
+    <script src="../js/fix-quick-help.js"></script>
 </body>
 </html>
