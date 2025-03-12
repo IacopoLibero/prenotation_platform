@@ -85,6 +85,19 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'studente'){
             padding: 50px;
             color: #666;
         }
+        .google-calendar-badge {
+            display: inline-block;
+            background-color: #4285F4;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+        }
+        .teacher-info {
+            display: flex;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -139,32 +152,46 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'studente'){
             fetch(`../api/search_teacher.php?search=${encodeURIComponent(searchTerm)}`)
                 .then(response => response.json())
                 .then(data => {
-                    const resultsContainer = document.getElementById('resultsContainer');
-                    resultsContainer.innerHTML = '';
+                    const container = document.getElementById('resultsContainer');
                     
                     if (data.success && data.teachers.length > 0) {
+                        let html = '';
+                        
                         data.teachers.forEach(teacher => {
-                            resultsContainer.innerHTML += `
+                            const hasGoogleCalendar = teacher.google_calendar_link !== null;
+                            
+                            html += `
                                 <div class="teacher-card">
-                                    <h3 class="teacher-name">${escapeHtml(teacher.username)}</h3>
-                                    <div class="teacher-email">${escapeHtml(teacher.email)}</div>
-                                    ${teacher.materie ? `<div class="teacher-subjects">Materie: ${escapeHtml(teacher.materie)}</div>` : ''}
-                                    ${teacher.bio ? `<div class="teacher-bio">${escapeHtml(teacher.bio)}</div>` : ''}
-                                    <button class="btn-favorite" onclick="addFavorite('${escapeHtml(teacher.email)}')">Aggiungi ai preferiti</button>
+                                    <div class="teacher-info">
+                                        <h3 class="teacher-name">${teacher.username}</h3>
+                                        ${hasGoogleCalendar ? '<span class="google-calendar-badge">Google Calendar</span>' : ''}
+                                    </div>
+                                    <div class="teacher-email">${teacher.email}</div>
+                                    ${teacher.materie ? `<div class="teacher-subjects">Materie: ${teacher.materie}</div>` : ''}
+                                    ${teacher.bio ? `<div class="teacher-bio">${teacher.bio}</div>` : ''}
+                                    <div class="teacher-actions">
+                                        <a href="orari_insegnanti.php?email=${encodeURIComponent(teacher.email)}" class="view-availability">Visualizza disponibilità</a>
+                                    </div>
                                 </div>
                             `;
                         });
+                        
+                        container.innerHTML = html;
                     } else {
-                        resultsContainer.innerHTML = `
+                        container.innerHTML = `
                             <div class="no-results">
-                                <p>Nessun insegnante trovato con i criteri di ricerca specificati.</p>
+                                <p>Nessun insegnante trovato per "${searchTerm}".</p>
                             </div>
                         `;
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Si è verificato un errore durante la ricerca.');
+                    document.getElementById('resultsContainer').innerHTML = `
+                        <div class="no-results">
+                            <p>Si è verificato un errore durante la ricerca.</p>
+                        </div>
+                    `;
                 });
         }
 

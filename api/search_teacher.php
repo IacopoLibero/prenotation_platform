@@ -13,7 +13,7 @@ if (!isset($_SESSION['user'])) {
 $search = '%' . trim($_GET['search']) . '%';
 
 // Cerca professori per nome utente o email
-$query = "SELECT username, email, materie, bio FROM Professori 
+$query = "SELECT username, email, materie, bio, google_calendar_link FROM Professori 
           WHERE username LIKE ? OR email LIKE ? OR materie LIKE ?
           ORDER BY username ASC";
 
