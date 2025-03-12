@@ -210,6 +210,7 @@ body{
 
 /* Mobile Styles */
 @media (max-width: 768px) {
+    /* Keep container and general styles */
     .container {
         min-height: 500px;
         width: 100%;
@@ -219,65 +220,112 @@ body{
         display: none;
     }
     
+    /* Revised form positioning with fade transitions */
     .form-container {
         position: absolute;
         top: 0;
+        left: 0;
         height: 100%;
         width: 100%;
-        transition: transform 0.6s ease-in-out, opacity 0.5s ease-in-out;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
     }
     
+    /* Sign-in is visible by default */
     .sign-in {
+        opacity: 1;
+        visibility: visible;
         z-index: 2;
     }
     
-    .sign-up {
-        opacity: 0;
-        z-index: 1;
-        transform: translateY(100%);
-    }
-    
+    /* When container is active, reverse the visibility with fade */
     .container.active .sign-in {
         opacity: 0;
-        transform: translateY(-100%);
+        visibility: hidden;
         z-index: 1;
     }
     
     .container.active .sign-up {
         opacity: 1;
-        transform: translateY(0);
+        visibility: visible;
         z-index: 2;
     }
     
-    .container form {
-        padding: 0 20px;
-    }
-    
+    /* Text links instead of buttons for mobile switching */
     .mobile-switch {
+        position: absolute;
+        bottom: 30px;
+        left: 0;
         display: flex;
         width: 100%;
         justify-content: center;
-        margin-top: 20px;
+        padding: 0 20px;
+        z-index: 10;
+        text-align: center;
+    }
+    
+    .switch-link {
+        color: #2da0a8;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        padding: 10px;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    
+    .switch-link:hover {
+        color: #238e95;
+        text-decoration: underline;
+    }
+    
+    /* More vertical space for mobile forms */
+    .container form {
+        padding: 20px;
+        padding-bottom: 80px; /* Add space for the text links at bottom */
+        max-width: 100%;
+    }
+    
+    /* Mobile switch buttons - ensure they're visible */
+    .mobile-switch {
+        position: absolute;
+        bottom: 30px;
+        left: 0;
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        padding: 0 20px;
+        z-index: 10;
     }
     
     .mobile-switch button {
-        background-color: transparent;
-        border: 1px solid #2da0a8;
-        color: #2da0a8;
-        padding: 8px 15px;
-        margin: 0 5px;
-        font-size: 12px;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-    }
-    
-    .mobile-switch button.active {
         background-color: #2da0a8;
         color: white;
+        border: none;
+        padding: 12px 30px;
+        font-size: 14px;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .mobile-switch button:hover {
+        background-color: #238e95;
+    }
+    
+    /* More vertical space for mobile forms */
+    .container form {
+        padding: 20px;
+        padding-bottom: 80px; /* Add space for the buttons at bottom */
+        max-width: 100%;
     }
     
     .container h1 {
-        margin-top: 30px;
+        margin-top: 20px;
+        margin-bottom: 15px;
     }
 }

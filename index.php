@@ -13,8 +13,9 @@
 
   <body>
     <div class="container" id="container">
+      <!-- Sign-up form and content -->
       <div class="form-container sign-up">
-      <form action="/login/script_registrazione.php" method="POST">
+        <form action="/login/script_registrazione.php" method="POST">
           <h1>Create Account</h1>
           <input type="text" name="Username" placeholder="Username" required />
           <input type="email" name="Email" placeholder="Email" required />
@@ -26,53 +27,57 @@
           </div>
           
           <button type="submit">Sign up</button>
-      </form>
-        <?php
-          session_start();
-          if(isset($_SESSION['status_reg']))
-          {
-            echo "<br>";
-            if($_SESSION['status_reg'] == "Registrazione effettuata"||$_SESSION['status']=="Logout effettuato con successo")
-            {
-              //verde
-              echo "<label>".$_SESSION['status_reg']."</label>";
-            }
-            else if($_SESSION['status_reg']=="Errore nella registrazione"||$_SESSION['status_reg']=="Utente già registrato")
-            {
-              //rosso
-              echo "<label>".$_SESSION['status_reg']."</label>";
-            }
-          }          
-        ?>
-        <!-- Mobile switch buttons for sign-up page -->
+          
+          <!-- Status messages -->
+          <?php
+            session_start();
+            if(isset($_SESSION['status_reg'])) {
+              echo "<br>";
+              if($_SESSION['status_reg'] == "Registrazione effettuata"||$_SESSION['status']=="Logout effettuato con successo") {
+                echo "<label style='color:green;'>".$_SESSION['status_reg']."</label>";
+              }
+              else if($_SESSION['status_reg']=="Errore nella registrazione"||$_SESSION['status_reg']=="Utente già registrato") {
+                echo "<label style='color:red;'>".$_SESSION['status_reg']."</label>";
+              }
+            }          
+          ?>
+        </form>
+        
+        <!-- Text link instead of button -->
         <div class="mobile-switch">
-          <button type="button" class="to-signin">Sign In</button>
-          <button type="button" class="to-signup active">Sign Up</button>
+          <a href="#" class="switch-link to-signin">Already registered? Sign in here</a>
         </div>
       </div>
+      
+      <!-- Sign-in form and content -->
       <div class="form-container sign-in">
         <form action="./login/login.php" method="POST">
           <h1>Sign In</h1>
-          <input type="email" name="Email" placeholder="Email" />
-          <input type="password" name="Password" placeholder="Password" />
+          <input type="email" name="Email" placeholder="Email" required />
+          <input type="password" name="Password" placeholder="Password" required />
           <a href="#">Forget Your Password?</a>
           <button type="submit">Sign in</button>
+          
+          <!-- Status messages -->
+          <?php
+            if(!isset($_SESSION)) { 
+              session_start();
+            }
+            if(isset($_SESSION['status'])) {
+              echo "<br>";
+              echo "<label style='color:red;'>".$_SESSION['status']."</label>";
+              session_unset();
+            }          
+          ?>
         </form>
-        <?php
-          session_start();
-          if(isset($_SESSION['status']))
-          {
-            echo "<br>";
-            echo "<label>".$_SESSION['status']."</label>";
-            session_unset();
-          }          
-        ?>
-        <!-- Mobile switch buttons for sign-in page -->
+        
+        <!-- Text link instead of button -->
         <div class="mobile-switch">
-          <button type="button" class="to-signin active">Sign In</button>
-          <button type="button" class="to-signup">Sign Up</button>
+          <a href="#" class="switch-link to-signup">Not registered yet? Create an account</a>
         </div>
       </div>
+      
+      <!-- Desktop toggle container -->
       <div class="toggle-container">
         <div class="toggle">
           <div class="toggle-panel toggle-left">
@@ -89,6 +94,7 @@
       </div>
     </div>
 
+    <!-- Use only one script file -->
     <script src="./login/script_login.js"></script>
   </body>
 </html>
