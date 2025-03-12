@@ -44,6 +44,11 @@
             }
           }          
         ?>
+        <!-- Mobile switch buttons for sign-up page -->
+        <div class="mobile-switch">
+          <button type="button" class="to-signin">Sign In</button>
+          <button type="button" class="to-signup active">Sign Up</button>
+        </div>
       </div>
       <div class="form-container sign-in">
         <form action="./login/login.php" method="POST">
@@ -51,7 +56,7 @@
           <input type="email" name="Email" placeholder="Email" />
           <input type="password" name="Password" placeholder="Password" />
           <a href="#">Forget Your Password?</a>
-          <button type="submit">Sig in</button>
+          <button type="submit">Sign in</button>
         </form>
         <?php
           session_start();
@@ -62,6 +67,11 @@
             session_unset();
           }          
         ?>
+        <!-- Mobile switch buttons for sign-in page -->
+        <div class="mobile-switch">
+          <button type="button" class="to-signin active">Sign In</button>
+          <button type="button" class="to-signup">Sign Up</button>
+        </div>
       </div>
       <div class="toggle-container">
         <div class="toggle">

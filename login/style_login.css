@@ -18,8 +18,8 @@ body{
 }
 .checkbox-container{
     display: flex;
-  justify-content: center;
-  margin: 10px;
+    justify-content: center;
+    margin: 10px;
 }
 
 .container{
@@ -211,4 +211,74 @@ body{
 
 .container.active .toggle-right{
     transform: translateX(200%);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        min-height: 550px;
+        margin: 15px;
+        width: 90%;
+    }
+    
+    .form-container {
+        width: 100%;
+    }
+    
+    .sign-in {
+        width: 100%;
+    }
+    
+    .sign-up {
+        width: 100%;
+    }
+    
+    .container.active .sign-in {
+        transform: translateY(-100%);
+    }
+    
+    .container.active .sign-up {
+        transform: translateY(0);
+    }
+    
+    .container form {
+        padding: 0 20px;
+    }
+    
+    /* Hide toggle container on mobile */
+    .toggle-container {
+        display: none;
+    }
+    
+    /* Add mobile switch buttons */
+    .mobile-switch {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    
+    .mobile-switch button {
+        background-color: transparent;
+        border: 1px solid #2da0a8;
+        color: #2da0a8;
+        padding: 8px 15px;
+        margin: 0 5px;
+        font-size: 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-switch button.active {
+        background-color: #2da0a8;
+        color: white;
+    }
+}
+
+/* Desktop styles */
+@media (min-width: 769px) {
+    .mobile-switch {
+        display: none;
+    }
 }
