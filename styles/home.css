@@ -151,7 +151,7 @@ nav ul li a:hover {
     color: #1a7f85;
 }
 
-/* Quick Help Section - Completely Revised */
+/* Quick Help Section - Styled to match dashboard cards */
 .quick-help {
     background: white !important;
     border-radius: 10px !important;
@@ -162,6 +162,13 @@ nav ul li a:hover {
     display: block !important;
     overflow: visible !important;
     max-width: 1200px !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.quick-help:hover {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px) !important;
 }
 
 .quick-help h3 {
@@ -169,6 +176,8 @@ nav ul li a:hover {
     margin-bottom: 1.5rem !important;
     text-align: center !important;
     font-size: 1.5rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 .help-content {
@@ -259,6 +268,8 @@ footer {
 @media (min-width: 769px) {
     .quick-help {
         padding: 2.5rem !important;
+        margin-top: 3rem !important;
+        margin-bottom: 3rem !important;
     }
     
     .help-content {
