@@ -30,9 +30,52 @@ if (!$data || empty($data['google_calendar_link'])) {
 
 // Scarica il contenuto del calendario
 $ical_content = @file_get_contents($data['google_calendar_link']);
+
+// Se file_get_contents fallisce, prova con cURL
 if ($ical_content === false) {
+    // Log dell'errore
+    error_log("file_get_contents fallito per l'URL: " . $data['google_calendar_link'] . " - Tentativo con cURL");
+    
+    // Verifica se cURL è disponibile
+    if (function_exists('curl_init')) {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $data['google_calendar_link']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disattiva la verifica SSL
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        $ical_content = curl_exec($ch);
+        $curl_error = curl_error($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($ical_content === false || empty($ical_content)) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false, 
+                'message' => 'Impossibile accedere al calendario. Verifica che il link sia corretto e pubblico.',
+                'debug_info' => "Errore cURL: $curl_error, HTTP code: $http_code"
+            ]);
+            exit;
+        }
+    } else {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Impossibile accedere al calendario. La funzione cURL non è disponibile sul server.'
+        ]);
+        exit;
+    }
+}
+
+// Verifica che il contenuto sia effettivamente un file iCal
+if (empty($ical_content) || strpos($ical_content, 'BEGIN:VCALENDAR') === false) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Impossibile accedere al calendario. Verifica che il link sia corretto e pubblico.']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Il contenuto scaricato non sembra essere un calendario valido.',
+        'debug_info' => "Lunghezza contenuto: " . strlen($ical_content) . " bytes"
+    ]);
     exit;
 }
 

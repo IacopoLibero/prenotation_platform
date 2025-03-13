@@ -34,14 +34,69 @@ if (!filter_var($calendar_link, FILTER_VALIDATE_URL)) {
     exit;
 }
 
+// Verifica che il link sia accessibile prima di salvarlo
+$accessible = false;
+
+// Prova con file_get_contents
+$ctx = stream_context_create(['http' => ['timeout' => 5]]);
+$test_content = @file_get_contents($calendar_link, false, $ctx);
+
+// Se fallisce, prova con cURL
+if ($test_content === false && function_exists('curl_init')) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $calendar_link);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $test_content = curl_exec($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($test_content !== false && $http_code >= 200 && $http_code < 300) {
+        $accessible = true;
+    }
+} else if ($test_content !== false) {
+    $accessible = true;
+}
+
+// Verifica che il contenuto sembri essere un calendario iCal
+if ($accessible && strpos($test_content, 'BEGIN:VCALENDAR') === false) {
+    $accessible = false;
+}
+
+if (!$accessible) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Il calendario non è accessibile o non è nel formato iCal corretto. Verifica che il link sia pubblico e corretto.'
+    ]);
+    exit;
+}
+
 // Estrazione dell'ID del calendario dal link
 $calendar_id = null;
 if (preg_match('/\/([a-zA-Z0-9%@._-]+)\/public\/basic\.ics$/', $calendar_link, $matches)) {
     $calendar_id = urldecode($matches[1]);
 } else {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Formato del link calendario non valido. Assicurati di utilizzare il link iCal dal tuo Google Calendar.']);
-    exit;
+    // Formato più permissivo per supportare più varianti di URL iCal
+    $parts = parse_url($calendar_link);
+    $path_parts = explode('/', $parts['path']);
+    foreach ($path_parts as $part) {
+        if (strpos($part, '@') !== false || (strlen($part) > 10 && preg_match('/[a-z0-9]/i', $part))) {
+            $calendar_id = $part;
+            break;
+        }
+    }
+    
+    if (!$calendar_id) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Formato del link calendario non valido. Assicurati di utilizzare il link iCal dal tuo Google Calendar.'
+        ]);
+        exit;
+    }
 }
 
 // Salvataggio del link del calendario
