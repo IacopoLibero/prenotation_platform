@@ -25,8 +25,8 @@ if (!$row || empty($row['google_calendar_link'])) {
     exit;
 }
 
-// Ottieni timeframe di debug (default: prossimi 14 giorni)
-$days = isset($_GET['days']) ? (int)$_GET['days'] : 14;
+// Ottieni timeframe di debug (default: prossimi 28 giorni - 4 settimane)
+$days = isset($_GET['days']) ? (int)$_GET['days'] : 28;
 $today = new DateTime('now', new DateTimeZone('Europe/Rome'));
 $end_date = clone $today;
 $end_date->modify("+$days days");

@@ -88,8 +88,8 @@ try {
     // Analizza gli eventi iCal
     $events = parse_ical_events($ical_content);
     
-    // Ottieni le date delle prossime 2 settimane
-    $dates = get_next_weeks_dates(2);
+    // Ottieni le date delle prossime 4 settimane invece di 2
+    $dates = get_next_weeks_dates(4);
     
     // Genera disponibilità in base alle date e agli eventi
     $availability = generate_availability($dates, $events, $data);

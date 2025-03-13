@@ -163,11 +163,17 @@ $result = $stmt->get_result();
         .week-header {
             text-align: center;
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 15px;
             background-color: #f1f8ff;
             border-left: 4px solid #2da0a8;
             border-radius: 4px;
             font-size: 1.2rem;
+        }
+        
+        .week-dates {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -316,14 +322,19 @@ $result = $stmt->get_result();
             
             // Calculate the start of the current week (Sunday/Monday depending on locale)
             const firstDayOfWeek = today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1); // Adjust for Monday as first day
+            const weekStart = new Date(today);
+            weekStart.setDate(firstDayOfWeek);
+            
+            // Create default empty weeks for better pagination
+            // Show at least 4 weeks even if there's no availability
+            for (let i = 0; i < 4; i++) {
+                groupedByWeek[i] = [];
+            }
             
             allAvailability.forEach(slot => {
                 const slotDate = new Date(slot.data);
                 
                 // Calculate which week this slot belongs to (0 = current week, 1 = next week, etc.)
-                const weekStart = new Date(today);
-                weekStart.setDate(firstDayOfWeek);
-                
                 // How many weeks from current week
                 const weekOffset = Math.floor((slotDate - weekStart) / (7 * 24 * 60 * 60 * 1000));
                 
@@ -345,8 +356,23 @@ $result = $stmt->get_result();
             // Get slots for the specified week
             const weekSlots = groupedByWeek[weekOffset] || [];
             
+            // Get the date range for this week
+            const today = new Date();
+            const firstDayOfWeek = today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1);
+            const weekStart = new Date(today);
+            weekStart.setDate(firstDayOfWeek + (weekOffset * 7));
+            
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            
+            const weekDateRange = `${weekStart.toLocaleDateString('it-IT')} - ${weekEnd.toLocaleDateString('it-IT')}`;
+            
             if (weekSlots.length === 0) {
                 container.innerHTML = `
+                    <div class="week-header">
+                        Settimana ${weekOffset === 0 ? 'corrente' : weekOffset === 1 ? 'prossima' : weekOffset + 1}
+                        <div class="week-dates">${weekDateRange}</div>
+                    </div>
                     <div class="no-availability">
                         <p>Nessuna disponibilità per questa settimana.</p>
                     </div>
@@ -379,11 +405,12 @@ $result = $stmt->get_result();
             });
             
             // Generate HTML for this week's dates
-            let html = '<h3 class="week-header">Settimana ';
-            if (weekOffset === 0) html += 'corrente';
-            else if (weekOffset === 1) html += 'prossima';
-            else html += (weekOffset + 1);
-            html += '</h3>';
+            let html = `
+                <div class="week-header">
+                    Settimana ${weekOffset === 0 ? 'corrente' : weekOffset === 1 ? 'prossima' : weekOffset + 1}
+                    <div class="week-dates">${weekDateRange}</div>
+                </div>
+            `;
             
             // Sort dates chronologically
             const sortedDates = Object.keys(groupedByDate).sort();
@@ -421,17 +448,9 @@ $result = $stmt->get_result();
         }
         
         function renderPagination(currentWeek) {
-            // Calculate total number of weeks
-            const totalWeeks = Object.keys(groupedByWeek).length;
-            
-            // Find min and max week numbers
-            let minWeek = Infinity;
-            let maxWeek = -Infinity;
-            Object.keys(groupedByWeek).forEach(week => {
-                const weekNum = parseInt(week);
-                minWeek = Math.min(minWeek, weekNum);
-                maxWeek = Math.max(maxWeek, weekNum);
-            });
+            // Find min and max week numbers - always include at least 4 weeks
+            let minWeek = 0;
+            let maxWeek = Math.max(3, Object.keys(groupedByWeek).length - 1);
             
             // Build pagination HTML
             let paginationHtml = `
@@ -442,13 +461,7 @@ $result = $stmt->get_result();
                         ${currentWeek <= minWeek ? 'disabled' : ''}>
                         &laquo; Settimana precedente
                     </button>
-                    <span class="page-indicator">Settimana `;
-            
-            if (currentWeek === 0) paginationHtml += 'corrente';
-            else if (currentWeek === 1) paginationHtml += 'prossima';
-            else paginationHtml += (currentWeek + 1);
-            
-            paginationHtml += `</span>
+                    <span class="page-indicator">Settimana ${currentWeek === 0 ? 'corrente' : currentWeek === 1 ? 'prossima' : currentWeek + 1}</span>
                     <button 
                         class="pagination-btn" 
                         onclick="changeWeek(${currentWeek + 1})"
@@ -462,8 +475,8 @@ $result = $stmt->get_result();
         }
         
         function changeWeek(newWeek) {
-            // Check if the requested week exists
-            if (groupedByWeek[newWeek]) {
+            // Allow navigating to any week in the range, even if there's no availability
+            if (newWeek >= 0 && newWeek <= Math.max(3, Object.keys(groupedByWeek).length - 1)) {
                 currentWeek = newWeek;
                 renderWeekAvailability(currentWeek);
                 window.scrollTo(0, 0); // Scroll to top
