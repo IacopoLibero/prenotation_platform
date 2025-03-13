@@ -98,7 +98,7 @@ $calendar_link = $row['google_calendar_link'] ?? '';
         .info-box {
             background-color: #e6f7ff;
             border-left: 4px solid #1890ff;
-            padding: 10px 15px;
+            padding: 10px 25px;
             margin-bottom: 20px;
             border-radius: 4px;
         }
@@ -285,9 +285,25 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                 if (!response.ok) {
                     throw new Error('Errore nella sincronizzazione del calendario: ' + response.status);
                 }
-                return response.json();
+                // First get the raw text response
+                return response.text();
             })
-            .then(data => {
+            .then(responseText => {
+                // Debug - log the raw response
+                console.log("Raw API Response:", responseText);
+                
+                // Try to parse as JSON only if it looks like JSON
+                let data;
+                try {
+                    if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+                        data = JSON.parse(responseText);
+                    } else {
+                        throw new Error('Risposta non valida JSON: ' + responseText);
+                    }
+                } catch (e) {
+                    throw new Error('Errore nel parsing JSON: ' + e.message + '\nRisposta: ' + responseText);
+                }
+                
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
                 

@@ -1,6 +1,10 @@
 <?php
 // Add this at the very beginning to prevent any output before headers
 ob_start();
+
+// Disabilita temporaneamente il reporting degli errori
+error_reporting(0);
+
 session_start();
 require_once '../connessione.php';
 
@@ -347,7 +351,8 @@ function save_availability($conn, $teacher_email, $availability) {
     return $success;
 }
 
-// At the end of the file, make sure to flush output
+// At the end of the file, make sure to flush output and restore error reporting
+error_reporting(E_ALL);
 if (!ob_get_contents()) {
     ob_end_clean();
 } else {
