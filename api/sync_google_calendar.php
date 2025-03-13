@@ -406,10 +406,25 @@ function save_availability($conn, $teacher_email, $availability) {
                 // Formatta correttamente le date per MySQL
                 $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']);
                 
-                // Assicurati che il formato sia corretto indipendentemente dalla locale del server
+                // Correggi il formato della data/ora per evitare doppi secondi
                 $formatted_date = date('Y-m-d', strtotime($date_str));
-                $start_time_str = $formatted_date . ' ' . $slot['ora_inizio'] . ':00';
-                $end_time_str = $formatted_date . ' ' . $slot['ora_fine'] . ':00';
+                
+                // Controlla se l'ora già include i secondi
+                $start_time = $slot['ora_inizio'];
+                $end_time = $slot['ora_fine'];
+                
+                // Se l'ora non include già i secondi, aggiungerli
+                if (substr_count($start_time, ':') === 1) {
+                    $start_time_str = $formatted_date . ' ' . $start_time . ':00';
+                } else {
+                    $start_time_str = $formatted_date . ' ' . $start_time;
+                }
+                
+                if (substr_count($end_time, ':') === 1) {
+                    $end_time_str = $formatted_date . ' ' . $end_time . ':00';
+                } else {
+                    $end_time_str = $formatted_date . ' ' . $end_time;
+                }
                 
                 error_log("Inserendo lezione: $titolo - $start_time_str - $end_time_str");
                 

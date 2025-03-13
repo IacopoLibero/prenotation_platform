@@ -80,7 +80,9 @@ foreach ($matches[0] as $event_text) {
             $day = substr($start_raw, 6, 2);
             $hour = substr($start_raw, 9, 2);
             $minute = substr($start_raw, 11, 2);
-            $second = substr($start_raw, 13, 2);
+            
+            // Only take seconds if they exist (sometimes ical entries don't have seconds)
+            $second = (strlen($start_raw) >= 15) ? substr($start_raw, 13, 2) : '00';
             
             if (substr($start_raw, -1) === 'Z') {
                 // Convert from UTC to local
