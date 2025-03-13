@@ -174,13 +174,19 @@ function parse_ical_date($date_string) {
             $minute = $matches[5];
             $second = $matches[6];
             
-            $date = new DateTime();
-            $date->setDate($year, $month, $day);
-            $date->setTime($hour, $minute, $second);
-            
-            // Converte in ora locale se la data è in UTC (indicato da Z)
+            // Crea la data nel timezone corretto
             if (substr($date_string, -1) === 'Z') {
+                // Se è in UTC (indicato da Z), crea la data in UTC
+                $date = new DateTime(null, new DateTimeZone('UTC'));
+                $date->setDate($year, $month, $day);
+                $date->setTime($hour, $minute, $second);
+                // Poi converti in timezone locale per Italia
                 $date->setTimezone(new DateTimeZone('Europe/Rome'));
+            } else {
+                // Se non ha Z, usiamo il timezone locale
+                $date = new DateTime(null, new DateTimeZone('Europe/Rome'));
+                $date->setDate($year, $month, $day);
+                $date->setTime($hour, $minute, $second);
             }
             
             return $date;
@@ -192,7 +198,7 @@ function parse_ical_date($date_string) {
             $month = $matches[2];
             $day = $matches[3];
             
-            $date = new DateTime();
+            $date = new DateTime(null, new DateTimeZone('Europe/Rome'));
             $date->setDate($year, $month, $day);
             $date->setTime(0, 0, 0);
             
@@ -240,6 +246,14 @@ function generate_availability($dates, $events, $preferences) {
             case 7: $day_name = 'domenica'; break;
         }
         
+        // Usa l'oggetto DateTime per la data corrente
+        $today = new DateTime('today');
+        
+        // Salta giorni passati (date nel passato)
+        if ($date < $today) {
+            continue;
+        }
+        
         // Genera slot per mattina e pomeriggio
         $slots = [];
         
@@ -280,7 +294,7 @@ function generate_availability($dates, $events, $preferences) {
     return $availability;
 }
 
-// Funzione per controllare se uno slot è occupato da eventi
+// Funzione migliorata per controllare se uno slot è occupato da eventi
 function is_slot_occupied($date, $slot, $events) {
     $slot_start = clone $date;
     $slot_end = clone $date;
@@ -291,14 +305,28 @@ function is_slot_occupied($date, $slot, $events) {
     $slot_start->setTime((int)$start_hour, (int)$start_minute);
     $slot_end->setTime((int)$end_hour, (int)$end_minute);
     
-    foreach ($events as $event) {
-        // Verifica se c'è sovrapposizione tra l'evento e lo slot
-        if (
-            ($event['start'] < $slot_end && $event['end'] > $slot_start) ||
-            ($slot_start < $event['end'] && $slot_end > $event['start'])
-        ) {
-            // C'è sovrapposizione
-            return true;
+    error_log("Verifica sovrapposizione per slot: " . $slot_start->format('Y-m-d H:i') . " - " . $slot_end->format('Y-m-d H:i'));
+    
+    foreach ($events as $index => $event) {
+        // Stampa dettagli dell'evento per debug
+        error_log("Evento #$index: " . $event['start']->format('Y-m-d H:i') . " - " . $event['end']->format('Y-m-d H:i'));
+        
+        // Verifica se l'evento è nello stesso giorno dello slot
+        $event_day = $event['start']->format('Y-m-d');
+        $slot_day = $slot_start->format('Y-m-d');
+        
+        if ($event_day == $slot_day) {
+            // Verifica se c'è sovrapposizione tra l'evento e lo slot
+            if (
+                ($event['start'] <= $slot_end && $event['end'] >= $slot_start) ||
+                ($slot_start <= $event['end'] && $slot_end >= $event['start'])
+            ) {
+                // Debug info
+                error_log("Sovrapposizione trovata! Slot bloccato: " . $slot_start->format('Y-m-d H:i') . " - " . $slot_end->format('Y-m-d H:i'));
+                
+                // C'è sovrapposizione
+                return true;
+            }
         }
     }
     
@@ -358,6 +386,15 @@ function save_availability($conn, $teacher_email, $availability) {
                                 (teacher_email, titolo, start_time, end_time, stato) 
                                 VALUES (?, ?, ?, ?, 'disponibile')";
                 $lesson_stmt = $conn->prepare($lesson_query);
+                
+                // Assicuriamoci che le date siano nel formato corretto per MySQL
+                $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); 
+                $start_time_str = date('Y-m-d H:i:s', strtotime($date_str . ' ' . $slot['ora_inizio']));
+                $end_time_str = date('Y-m-d H:i:s', strtotime($date_str . ' ' . $slot['ora_fine']));
+                
+                // Debug
+                error_log("Inserendo lezione: $start_time_str - $end_time_str");
+                
                 $lesson_stmt->bind_param(
                     "ssss", 
                     $teacher_email, 
