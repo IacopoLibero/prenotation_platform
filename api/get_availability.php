@@ -21,9 +21,42 @@ if (empty($teacher_email)) {
 
 // Ottieni la disponibilità
 $query = "SELECT d.giorno_settimana, d.ora_inizio, d.ora_fine, 
-          CASE WHEN p.google_calendar_link IS NOT NULL THEN 1 ELSE 0 END as from_google_calendar 
+          CASE WHEN p.google_calendar_link IS NOT NULL THEN 1 ELSE 0 END as from_google_calendar,
+          l.id as lesson_id, l.stato
           FROM Disponibilita d
           JOIN Professori p ON d.teacher_email = p.email
+          LEFT JOIN Lezioni l ON d.teacher_email = l.teacher_email 
+                AND DATE_FORMAT(l.start_time, '%Y-%m-%d') = DATE_FORMAT(CURDATE() + INTERVAL 
+                    CASE 
+                        WHEN DAYOFWEEK(CURDATE()) <= CASE 
+                            WHEN d.giorno_settimana = 'lunedi' THEN 2
+                            WHEN d.giorno_settimana = 'martedi' THEN 3
+                            WHEN d.giorno_settimana = 'mercoledi' THEN 4
+                            WHEN d.giorno_settimana = 'giovedi' THEN 5
+                            WHEN d.giorno_settimana = 'venerdi' THEN 6
+                            WHEN d.giorno_settimana = 'sabato' THEN 7
+                            WHEN d.giorno_settimana = 'domenica' THEN 1
+                        END
+                        THEN CASE 
+                            WHEN d.giorno_settimana = 'lunedi' THEN 2
+                            WHEN d.giorno_settimana = 'martedi' THEN 3
+                            WHEN d.giorno_settimana = 'mercoledi' THEN 4
+                            WHEN d.giorno_settimana = 'giovedi' THEN 5
+                            WHEN d.giorno_settimana = 'venerdi' THEN 6
+                            WHEN d.giorno_settimana = 'sabato' THEN 7
+                            WHEN d.giorno_settimana = 'domenica' THEN 1
+                        END - DAYOFWEEK(CURDATE())
+                        ELSE CASE 
+                            WHEN d.giorno_settimana = 'lunedi' THEN 9
+                            WHEN d.giorno_settimana = 'martedi' THEN 10
+                            WHEN d.giorno_settimana = 'mercoledi' THEN 11
+                            WHEN d.giorno_settimana = 'giovedi' THEN 12
+                            WHEN d.giorno_settimana = 'venerdi' THEN 13
+                            WHEN d.giorno_settimana = 'sabato' THEN 14
+                            WHEN d.giorno_settimana = 'domenica' THEN 8
+                        END - DAYOFWEEK(CURDATE())
+                    END DAY, '%Y-%m-%d')
+                AND TIME_FORMAT(l.start_time, '%H:%i') = d.ora_inizio
           WHERE d.teacher_email = ? 
           ORDER BY FIELD(d.giorno_settimana, 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'), 
           d.ora_inizio";

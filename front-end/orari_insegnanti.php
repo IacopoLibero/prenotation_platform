@@ -104,6 +104,61 @@ $result = $stmt->get_result();
             margin-left: 8px;
             border: 1px solid #ddd;
         }
+        .booking-btn {
+            background-color: #2da0a8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+        
+        .booking-btn:hover {
+            background-color: #259199;
+        }
+        
+        .booking-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .pagination-btn {
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .pagination-btn:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .pagination-btn:disabled {
+            background-color: #f9f9f9;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        
+        .page-indicator {
+            padding: 8px 15px;
+            color: #666;
+        }
+
+        .booked-slot {
+            background-color: #f8f9fa;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -157,15 +212,24 @@ $result = $stmt->get_result();
     </footer>
 
     <script>
+        // Global variables for pagination
+        let currentPage = 1;
+        let daysPerPage = 7;
+        let allAvailability = [];
+        let currentTeacherEmail = '';
+        
         document.getElementById('teacherSelect').addEventListener('change', function() {
-            const teacherEmail = this.value;
+            currentTeacherEmail = this.value;
             const hasCalendar = this.options[this.selectedIndex].getAttribute('data-has-calendar') === '1';
             const calendarInfoBox = document.getElementById('calendarInfoBox');
+            
+            // Reset pagination
+            currentPage = 1;
             
             // Mostra o nascondi l'info box del calendario
             calendarInfoBox.style.display = hasCalendar ? 'block' : 'none';
             
-            if (!teacherEmail) {
+            if (!currentTeacherEmail) {
                 document.getElementById('availabilityContainer').innerHTML = `
                     <div class="no-availability">
                         <p>Seleziona un insegnante per visualizzare la sua disponibilità.</p>
@@ -181,7 +245,11 @@ $result = $stmt->get_result();
                 </div>
             `;
             
-            fetch(`../api/get_availability.php?email=${encodeURIComponent(teacherEmail)}`)
+            loadAvailability();
+        });
+        
+        function loadAvailability() {
+            fetch(`../api/get_availability.php?email=${encodeURIComponent(currentTeacherEmail)}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Errore nella risposta del server');
@@ -190,59 +258,16 @@ $result = $stmt->get_result();
                 })
                 .then(data => {
                     console.log("Dati ricevuti:", data); // Debug
-                    const container = document.getElementById('availabilityContainer');
                     
                     if (data.success && data.availability && data.availability.length > 0) {
-                        // Group availability by date instead of day of week
-                        const groupedByDate = {};
-                        const dayNames = {
-                            'lunedi': 'Lunedì',
-                            'martedi': 'Martedì',
-                            'mercoledi': 'Mercoledì',
-                            'giovedi': 'Giovedì',
-                            'venerdi': 'Venerdì',
-                            'sabato': 'Sabato',
-                            'domenica': 'Domenica'
-                        };
+                        // Store all availability data
+                        allAvailability = data.availability;
                         
-                        data.availability.forEach(slot => {
-                            // Group by date rather than weekday
-                            if (!groupedByDate[slot.data]) {
-                                groupedByDate[slot.data] = {
-                                    day: dayNames[slot.giorno_settimana],
-                                    date: slot.data_formattata,
-                                    slots: []
-                                };
-                            }
-                            groupedByDate[slot.data].slots.push(slot);
-                        });
-                        
-                        // Generate HTML for each date
-                        let html = '';
-                        const sortedDates = Object.keys(groupedByDate).sort(); // Sort by date
-                        
-                        sortedDates.forEach(date => {
-                            const dayData = groupedByDate[date];
-                            html += `
-                                <div class="day-card">
-                                    <h3 class="day-header">${dayData.day} ${dayData.date}</h3>
-                            `;
-                            
-                            dayData.slots.forEach(slot => {
-                                html += `
-                                    <div class="time-slot">
-                                        <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                                        ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
-                                    </div>
-                                `;
-                            });
-                            
-                            html += `</div>`;
-                        });
-                        
-                        container.innerHTML = html;
+                        // Render the current page
+                        renderAvailabilityPage(currentPage);
                     } else {
                         // Messaggio personalizzato in base a se l'insegnante usa Google Calendar o meno
+                        const container = document.getElementById('availabilityContainer');
                         if (data.uses_google_calendar) {
                             container.innerHTML = `
                                 <div class="no-availability">
@@ -267,7 +292,135 @@ $result = $stmt->get_result();
                         </div>
                     `;
                 });
-        });
+        }
+        
+        function renderAvailabilityPage(page) {
+            const container = document.getElementById('availabilityContainer');
+            const startIdx = (page - 1) * daysPerPage;
+            const endIdx = Math.min(startIdx + daysPerPage, allAvailability.length);
+            
+            // Group availability by date
+            const groupedByDate = {};
+            const dayNames = {
+                'lunedi': 'Lunedì',
+                'martedi': 'Martedì',
+                'mercoledi': 'Mercoledì',
+                'giovedi': 'Giovedì',
+                'venerdi': 'Venerdì',
+                'sabato': 'Sabato',
+                'domenica': 'Domenica'
+            };
+            
+            // Only group the dates for current page
+            const currentPageAvailability = allAvailability.slice(startIdx, endIdx);
+            
+            currentPageAvailability.forEach(slot => {
+                if (!groupedByDate[slot.data]) {
+                    groupedByDate[slot.data] = {
+                        day: dayNames[slot.giorno_settimana],
+                        date: slot.data_formattata,
+                        slots: []
+                    };
+                }
+                groupedByDate[slot.data].slots.push(slot);
+            });
+            
+            // Generate HTML for this page's dates
+            let html = '';
+            const sortedDates = Object.keys(groupedByDate).sort(); // Sort by date
+            
+            sortedDates.forEach(date => {
+                const dayData = groupedByDate[date];
+                html += `
+                    <div class="day-card">
+                        <h3 class="day-header">${dayData.day} ${dayData.date}</h3>
+                `;
+                
+                dayData.slots.forEach(slot => {
+                    const isAvailable = slot.stato !== 'prenotata' && slot.stato !== 'completata';
+                    const slotClass = isAvailable ? '' : 'booked-slot';
+                    const bookingBtn = isAvailable ? 
+                        `<button class="booking-btn" onclick="bookSlot('${slot.id || ''}', '${slot.data}', '${slot.ora_inizio}', '${slot.ora_fine}')">Prenota</button>` :
+                        `<span class="booking-status">Prenotato</span>`;
+                    
+                    html += `
+                        <div class="time-slot ${slotClass}">
+                            <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                            ${bookingBtn}
+                            ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            });
+            
+            // Add pagination controls if needed
+            if (allAvailability.length > daysPerPage) {
+                const totalPages = Math.ceil(allAvailability.length / daysPerPage);
+                
+                html += `
+                    <div class="pagination">
+                        <button 
+                            class="pagination-btn" 
+                            onclick="changePage(${page - 1})"
+                            ${page === 1 ? 'disabled' : ''}>
+                            &laquo; Precedente
+                        </button>
+                        <span class="page-indicator">Pagina ${page} di ${totalPages}</span>
+                        <button 
+                            class="pagination-btn" 
+                            onclick="changePage(${page + 1})"
+                            ${page >= totalPages ? 'disabled' : ''}>
+                            Successivo &raquo;
+                        </button>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function changePage(newPage) {
+            if (newPage >= 1 && newPage <= Math.ceil(allAvailability.length / daysPerPage)) {
+                currentPage = newPage;
+                renderAvailabilityPage(currentPage);
+                window.scrollTo(0, 0); // Scroll to top
+            }
+        }
+        
+        function bookSlot(slotId, date, startTime, endTime) {
+            if (!confirm(`Vuoi prenotare la lezione di ${date} dalle ${startTime} alle ${endTime}?`)) {
+                return;
+            }
+            
+            fetch('../api/book_lesson.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `teacher_email=${encodeURIComponent(currentTeacherEmail)}&date=${encodeURIComponent(date)}&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}`
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Errore nella risposta del server');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    alert('Lezione prenotata con successo!');
+                    // Refresh the availability to reflect the booking
+                    loadAvailability();
+                } else {
+                    alert('Errore: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Si è verificato un errore durante la prenotazione: ' + error.message);
+            });
+        }
     </script>
 </body>
 </html>
