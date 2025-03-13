@@ -95,14 +95,15 @@ try {
     $availability = generate_availability($dates, $events, $data);
     
     // Prima elimina le vecchie disponibilità non ancora prenotate
-    $delete_query = "DELETE d FROM Disponibilita d 
-                    LEFT JOIN Lezioni l ON (
-                        d.giorno_settimana = l.giorno_settimana 
-                        AND d.ora_inizio = l.ora_inizio 
-                        AND d.teacher_email = l.teacher_email
-                    ) 
-                    WHERE d.teacher_email = ? AND (l.id IS NULL OR l.stato = 'disponibile')";
+    // Modifico la query per evitare l'errore di colonna sconosciuta
+    $delete_query = "DELETE FROM Disponibilita WHERE teacher_email = ?";
     $stmt = $conn->prepare($delete_query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    
+    // Elimina anche le vecchie lezioni che sono ancora disponibili
+    $delete_lessons_query = "DELETE FROM Lezioni WHERE teacher_email = ? AND stato = 'disponibile'";
+    $stmt = $conn->prepare($delete_lessons_query);
     $stmt->bind_param("s", $teacher_email);
     $stmt->execute();
     
@@ -334,17 +335,22 @@ function save_availability($conn, $teacher_email, $availability) {
             $success = false;
         } else {
             // Crea anche la lezione corrispondente
+            // Adattata per la struttura effettiva della tabella Lezioni
+            $date_str = $slot['data'];
+            $start_time_str = $date_str . ' ' . $slot['ora_inizio'];
+            $end_time_str = $date_str . ' ' . $slot['ora_fine'];
+            $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); // Capitalizza il nome del giorno
+            
             $lesson_query = "INSERT INTO Lezioni 
-                            (teacher_email, giorno_settimana, ora_inizio, ora_fine, data, stato) 
-                            VALUES (?, ?, ?, ?, ?, 'disponibile')";
+                            (teacher_email, titolo, start_time, end_time, stato) 
+                            VALUES (?, ?, ?, ?, 'disponibile')";
             $lesson_stmt = $conn->prepare($lesson_query);
             $lesson_stmt->bind_param(
-                "sssss", 
+                "ssss", 
                 $teacher_email, 
-                $slot['giorno_settimana'], 
-                $slot['ora_inizio'], 
-                $slot['ora_fine'], 
-                $slot['data']
+                $titolo,
+                $start_time_str,
+                $end_time_str
             );
             
             if (!$lesson_stmt->execute()) {
