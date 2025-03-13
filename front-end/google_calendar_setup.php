@@ -292,31 +292,38 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                 // Debug - log the raw response
                 console.log("Raw API Response:", responseText);
                 
+                // Check if the response is actually empty
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('Il server ha restituito una risposta vuota. Controlla i log del server.');
+                }
+                
                 // Try to parse as JSON only if it looks like JSON
                 let data;
                 try {
                     if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
                         data = JSON.parse(responseText);
                     } else {
-                        throw new Error('Risposta non valida JSON: ' + responseText);
+                        throw new Error('Risposta non valida JSON: ' + responseText.substring(0, 100) + '...');
                     }
                 } catch (e) {
-                    throw new Error('Errore nel parsing JSON: ' + e.message + '\nRisposta: ' + responseText);
+                    throw new Error('Errore nel parsing JSON: ' + e.message + '\nRisposta: ' + responseText.substring(0, 100));
                 }
                 
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
                 
-                if (data.success) {
+                if (data && data.success) {
                     alert('Calendario sincronizzato con successo. Nuove disponibilità generate.');
                     // Reindirizzamento opzionale
                     window.location.href = 'disponibilita.php';
-                } else {
+                } else if (data) {
                     // Mostra il messaggio di errore
                     alert('Errore durante la sincronizzazione: ' + data.message);
                     if (data.debug_info) {
                         console.error('Debug info:', data.debug_info);
                     }
+                } else {
+                    throw new Error('Risposta non valida dal server');
                 }
             })
             .catch(error => {

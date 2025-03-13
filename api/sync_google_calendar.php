@@ -1,56 +1,74 @@
 <?php
-// Add this at the very beginning to prevent any output before headers
+// Strict error handling approach
+ini_set('display_errors', 0); // Don't display errors directly
+error_reporting(E_ALL); // But still report all types of errors
+
+// Start output buffering to prevent any output before headers
 ob_start();
 
-// Disabilita temporaneamente il reporting degli errori
-error_reporting(0);
+// For catching fatal errors that would otherwise produce blank page
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // Clean any output that might have been sent
+        ob_end_clean();
+        
+        // Send proper JSON error response
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Si è verificato un errore durante la sincronizzazione',
+            'debug_info' => $error['message'] . ' in ' . $error['file'] . ' on line ' . $error['line']
+        ]);
+    }
+});
 
-session_start();
-require_once '../connessione.php';
-
-// Controllo se l'utente è loggato ed è un professore
-if (!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore') {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Non autorizzato']);
-    ob_end_flush();
-    exit;
-}
-
-$teacher_email = $_SESSION['email'];
-
-// Recupero informazioni del calendario e preferenze
-$query = "SELECT p.google_calendar_link, pd.* 
-          FROM Professori p
-          LEFT JOIN Preferenze_Disponibilita pd ON p.email = pd.teacher_email
-          WHERE p.email = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("s", $teacher_email);
-$stmt->execute();
-$result = $stmt->get_result();
-$data = $result->fetch_assoc();
-
-if (!$data || empty($data['google_calendar_link'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Nessun calendario Google configurato']);
-    ob_end_flush();
-    exit;
-}
-
-// Scarica il contenuto del calendario
-$ical_content = @file_get_contents($data['google_calendar_link']);
-
-// Se file_get_contents fallisce, prova con cURL
-if ($ical_content === false) {
-    // Log dell'errore
-    error_log("file_get_contents fallito per l'URL: " . $data['google_calendar_link'] . " - Tentativo con cURL");
+try {
+    session_start();
+    require_once '../connessione.php';
     
-    // Verifica se cURL è disponibile
-    if (function_exists('curl_init')) {
+    // Controllo se l'utente è loggato ed è un professore
+    if (!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore') {
+        throw new Exception('Non autorizzato');
+    }
+    
+    $teacher_email = $_SESSION['email'];
+    
+    // Recupero informazioni del calendario e preferenze
+    $query = "SELECT p.google_calendar_link, pd.* 
+              FROM Professori p
+              LEFT JOIN Preferenze_Disponibilita pd ON p.email = pd.teacher_email
+              WHERE p.email = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $data = $result->fetch_assoc();
+    
+    if (!$data || empty($data['google_calendar_link'])) {
+        throw new Exception('Nessun calendario Google configurato');
+    }
+    
+    // Verifica l'URL del calendario prima di procedere
+    $calendar_url = $data['google_calendar_link'];
+    if (!filter_var($calendar_url, FILTER_VALIDATE_URL)) {
+        throw new Exception('URL del calendario non valido');
+    }
+    
+    // Scarica il contenuto del calendario
+    $ical_content = @file_get_contents($calendar_url);
+    
+    // Se file_get_contents fallisce, prova con cURL
+    if ($ical_content === false) {
+        if (!function_exists('curl_init')) {
+            throw new Exception('Impossibile accedere al calendario. La funzione cURL non è disponibile sul server.');
+        }
+        
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $data['google_calendar_link']);
+        curl_setopt($ch, CURLOPT_URL, $calendar_url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disattiva la verifica SSL
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         $ical_content = curl_exec($ch);
         $curl_error = curl_error($ch);
@@ -58,71 +76,59 @@ if ($ical_content === false) {
         curl_close($ch);
         
         if ($ical_content === false || empty($ical_content)) {
-            header('Content-Type: application/json');
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Impossibile accedere al calendario. Verifica che il link sia corretto e pubblico.',
-                'debug_info' => "Errore cURL: $curl_error, HTTP code: $http_code"
-            ]);
-            ob_end_flush();
-            exit;
+            throw new Exception('Impossibile accedere al calendario. Verifica che il link sia corretto e pubblico. Errore: ' . $curl_error);
         }
-    } else {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Impossibile accedere al calendario. La funzione cURL non è disponibile sul server.'
-        ]);
-        ob_end_flush();
-        exit;
     }
-}
-
-// Verifica che il contenuto sia effettivamente un file iCal
-if (empty($ical_content) || strpos($ical_content, 'BEGIN:VCALENDAR') === false) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Il contenuto scaricato non sembra essere un calendario valido.',
-        'debug_info' => "Lunghezza contenuto: " . strlen($ical_content) . " bytes"
-    ]);
-    ob_end_flush();
-    exit;
-}
-
-// Analizza gli eventi iCal
-$events = parse_ical_events($ical_content);
-
-// Ottieni le date delle prossime 2 settimane
-$dates = get_next_weeks_dates(2);
-
-// Genera disponibilità in base alle date e agli eventi
-$availability = generate_availability($dates, $events, $data);
-
-// Prima elimina le vecchie disponibilità non ancora prenotate
-$delete_query = "DELETE d FROM Disponibilita d 
-                LEFT JOIN Lezioni l ON (
-                    d.giorno_settimana = l.giorno_settimana 
-                    AND d.ora_inizio = l.ora_inizio 
-                    AND d.teacher_email = l.teacher_email
-                ) 
-                WHERE d.teacher_email = ? AND (l.id IS NULL OR l.stato = 'disponibile')";
-$stmt = $conn->prepare($delete_query);
-$stmt->bind_param("s", $teacher_email);
-$stmt->execute();
-
-// Salva le nuove disponibilità nel database
-$result = save_availability($conn, $teacher_email, $availability);
-
-if ($result) {
+    
+    // Verifica che il contenuto sia effettivamente un file iCal
+    if (empty($ical_content) || strpos($ical_content, 'BEGIN:VCALENDAR') === false) {
+        throw new Exception('Il contenuto scaricato non sembra essere un calendario valido.');
+    }
+    
+    // Analizza gli eventi iCal
+    $events = parse_ical_events($ical_content);
+    
+    // Ottieni le date delle prossime 2 settimane
+    $dates = get_next_weeks_dates(2);
+    
+    // Genera disponibilità in base alle date e agli eventi
+    $availability = generate_availability($dates, $events, $data);
+    
+    // Prima elimina le vecchie disponibilità non ancora prenotate
+    $delete_query = "DELETE d FROM Disponibilita d 
+                    LEFT JOIN Lezioni l ON (
+                        d.giorno_settimana = l.giorno_settimana 
+                        AND d.ora_inizio = l.ora_inizio 
+                        AND d.teacher_email = l.teacher_email
+                    ) 
+                    WHERE d.teacher_email = ? AND (l.id IS NULL OR l.stato = 'disponibile')";
+    $stmt = $conn->prepare($delete_query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    
+    // Salva le nuove disponibilità nel database
+    $result = save_availability($conn, $teacher_email, $availability);
+    
+    if (!$result) {
+        throw new Exception('Errore durante il salvataggio delle disponibilità');
+    }
+    
+    // Success response - ensure output buffer is clean before sending
+    ob_end_clean();
     header('Content-Type: application/json');
     echo json_encode(['success' => true, 'message' => 'Disponibilità generate con successo']);
-} else {
+
+} catch (Exception $e) {
+    // Error response - ensure output buffer is clean before sending
+    ob_end_clean();
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Errore durante il salvataggio delle disponibilità']);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 
-$conn->close();
+// Close database connection if it exists
+if (isset($conn) && $conn) {
+    $conn->close();
+}
 
 // Funzione per analizzare gli eventi iCal
 function parse_ical_events($ical_content) {
@@ -351,11 +357,8 @@ function save_availability($conn, $teacher_email, $availability) {
     return $success;
 }
 
-// At the end of the file, make sure to flush output and restore error reporting
-error_reporting(E_ALL);
-if (!ob_get_contents()) {
-    ob_end_clean();
-} else {
+// If the script reaches here normally, make sure any content is sent
+if (ob_get_length() > 0) {
     ob_end_flush();
 }
 ?>
