@@ -65,6 +65,18 @@ function get_next_date_for_weekday($weekday) {
 $availability_by_day = [];
 $days_of_week = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 
+// Get today's day number (1 = Monday, 7 = Sunday)
+$today_day_num = (int)(new DateTime())->format('N');
+
+// Reorder days to start from tomorrow
+$reordered_days = [];
+for ($i = 0; $i < 7; $i++) {
+    $day_index = ($today_day_num + $i) % 7; // Wrap around after 7
+    if ($day_index == 0) $day_index = 7; // Convert 0 to 7 for Sunday
+    $reordered_days[] = $days_of_week[$day_index - 1];
+}
+
+// Initialize empty arrays for each day
 foreach ($days_of_week as $day) {
     $availability_by_day[$day] = [];
 }
@@ -281,15 +293,25 @@ while ($row = $result->fetch_assoc()) {
                             'domenica' => 'Domenica'
                         ];
                         
-                        foreach($availability_by_day as $day => $slots): 
+                        // Use the reordered days array
+                        foreach($reordered_days as $day): 
+                            // Skip today as we want to show from tomorrow forward
+                            if ($day == $days_of_week[$today_day_num - 1]) continue;
+                            
+                            $slots = $availability_by_day[$day];
+                            if (empty($slots)) continue; // Skip days with no slots
                         ?>
                             <div class="day-card">
-                                <h3 class="day-header"><?= $day_names[$day] ?></h3>
+                                <h3 class="day-header">
+                                    <?= $day_names[$day] ?>
+                                    <?php if(!empty($slots)): ?>
+                                        <span class="date-badge"><?= $slots[0]['data_formattata'] ?></span>
+                                    <?php endif; ?>
+                                </h3>
                                 <?php if(!empty($slots)): ?>
                                     <?php foreach($slots as $slot): ?>
                                         <div class="time-slot">
                                             <span class="time-range"><?= $slot['ora_inizio'] ?> - <?= $slot['ora_fine'] ?></span>
-                                            <span class="date-badge"><?= $slot['data_formattata'] ?></span>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php else: ?>

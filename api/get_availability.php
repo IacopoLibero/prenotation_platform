@@ -38,9 +38,14 @@ while ($row = $result->fetch_assoc()) {
     $date = calculate_next_date_for_weekday($row['giorno_settimana']);
     $row['data'] = $date->format('Y-m-d');  // ISO format date
     $row['data_formattata'] = $date->format('d/m/Y');  // Localized format
-
+    $row['days_from_today'] = calculate_days_from_today($row['giorno_settimana']);
     $availability[] = $row;
 }
+
+// Sort availability by days from today (closest first)
+usort($availability, function($a, $b) {
+    return $a['days_from_today'] <=> $b['days_from_today'];
+});
 
 // Aggiungi anche l'informazione se l'insegnante usa Google Calendar
 $query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
@@ -92,6 +97,29 @@ function calculate_next_date_for_weekday($weekday) {
     $next_date->modify("+$days_to_add days");
     
     return $next_date;
+}
+
+// Function to calculate days from today (0 = today, 1 = tomorrow, etc.)
+function calculate_days_from_today($weekday) {
+    $weekdays = [
+        'lunedi' => 1,
+        'martedi' => 2,
+        'mercoledi' => 3,
+        'giovedi' => 4,
+        'venerdi' => 5,
+        'sabato' => 6,
+        'domenica' => 7
+    ];
+    
+    $today = new DateTime();
+    $target_day_num = $weekdays[$weekday];
+    $current_day_num = (int)$today->format('N'); // 1 (Monday) to 7 (Sunday)
+    
+    if ($target_day_num >= $current_day_num) {
+        return $target_day_num - $current_day_num; // Days ahead this week
+    } else {
+        return 7 - ($current_day_num - $target_day_num); // Days ahead next week
+    }
 }
 
 $stmt->close();

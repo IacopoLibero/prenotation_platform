@@ -193,8 +193,8 @@ $result = $stmt->get_result();
                     const container = document.getElementById('availabilityContainer');
                     
                     if (data.success && data.availability && data.availability.length > 0) {
-                        // Group availability by day of the week
-                        const groupedByDay = {};
+                        // Group availability by date instead of day of week
+                        const groupedByDate = {};
                         const dayNames = {
                             'lunedi': 'Lunedì',
                             'martedi': 'Martedì',
@@ -206,32 +206,39 @@ $result = $stmt->get_result();
                         };
                         
                         data.availability.forEach(slot => {
-                            if (!groupedByDay[slot.giorno_settimana]) {
-                                groupedByDay[slot.giorno_settimana] = [];
+                            // Group by date rather than weekday
+                            if (!groupedByDate[slot.data]) {
+                                groupedByDate[slot.data] = {
+                                    day: dayNames[slot.giorno_settimana],
+                                    date: slot.data_formattata,
+                                    slots: []
+                                };
                             }
-                            groupedByDay[slot.giorno_settimana].push(slot);
+                            groupedByDate[slot.data].slots.push(slot);
                         });
                         
-                        // Generate HTML for each day
+                        // Generate HTML for each date
                         let html = '';
-                        for (const day in groupedByDay) {
+                        const sortedDates = Object.keys(groupedByDate).sort(); // Sort by date
+                        
+                        sortedDates.forEach(date => {
+                            const dayData = groupedByDate[date];
                             html += `
                                 <div class="day-card">
-                                    <h3 class="day-header">${dayNames[day]}</h3>
+                                    <h3 class="day-header">${dayData.day} ${dayData.date}</h3>
                             `;
                             
-                            groupedByDay[day].forEach(slot => {
+                            dayData.slots.forEach(slot => {
                                 html += `
                                     <div class="time-slot">
                                         <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                                        <span class="date-badge">${slot.data_formattata}</span>
                                         ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
                                     </div>
                                 `;
                             });
                             
                             html += `</div>`;
-                        }
+                        });
                         
                         container.innerHTML = html;
                     } else {
