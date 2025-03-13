@@ -250,6 +250,13 @@ function generate_availability($dates, $events, $preferences) {
     // Durata di ogni slot in minuti (default: 60 minuti)
     $slot_duration = 60;
     
+    // Log delle preferenze per debug
+    error_log("Generazione disponibilità con preferenze: " . 
+              "mattina=" . ($preferences['mattina'] ? 'true' : 'false') . 
+              " (" . $preferences['ora_inizio_mattina'] . "-" . $preferences['ora_fine_mattina'] . "), " .
+              "pomeriggio=" . ($preferences['pomeriggio'] ? 'true' : 'false') . 
+              " (" . $preferences['ora_inizio_pomeriggio'] . "-" . $preferences['ora_fine_pomeriggio'] . ")");
+    
     foreach ($dates as $date) {
         // Salta weekend se non abilitato
         $day_of_week = $date->format('N');
@@ -278,20 +285,26 @@ function generate_availability($dates, $events, $preferences) {
         }
         
         $date_str = $date->format('Y-m-d');
+        error_log("Elaborazione disponibilità per $date_str ($day_name)");
         
-        // Genera slot per mattina e pomeriggio suddivisi in blocchi più piccoli
-        if ($preferences['mattina']) {
-            // Converti orari in oggetti DateTime
-            $morning_start = new DateTime($date_str . ' ' . $preferences['ora_inizio_mattina']);
-            $morning_end = new DateTime($date_str . ' ' . $preferences['ora_fine_mattina']);
+        // MATTINA: Genera slot per orari mattutini
+        if ($preferences['mattina'] && !empty($preferences['ora_inizio_mattina']) && !empty($preferences['ora_fine_mattina'])) {
+            $morning_start_time = $preferences['ora_inizio_mattina'];
+            $morning_end_time = $preferences['ora_fine_mattina'];
             
-            // Genera slot della durata specificata
+            error_log("Generazione slot mattutini: $morning_start_time - $morning_end_time");
+            
+            // Converti stringhe orario in oggetti DateTime
+            $morning_start = new DateTime($date_str . ' ' . $morning_start_time);
+            $morning_end = new DateTime($date_str . ' ' . $morning_end_time);
+            
+            // Genera slot orari da inizio a fine mattina
             $current = clone $morning_start;
             while ($current < $morning_end) {
                 $slot_end = clone $current;
                 $slot_end->modify("+{$slot_duration} minutes");
                 
-                // Assicurati di non superare l'orario di fine mattina
+                // Se lo slot finale supererebbe l'orario di fine, lo tronca
                 if ($slot_end > $morning_end) {
                     $slot_end = clone $morning_end;
                 }
@@ -305,25 +318,33 @@ function generate_availability($dates, $events, $preferences) {
                 
                 if (!is_slot_occupied($date, $slot, $events)) {
                     $availability[] = $slot;
+                    error_log("Aggiunto slot mattutino: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                } else {
+                    error_log("Slot mattutino occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 }
                 
-                // Passa al prossimo slot
                 $current = $slot_end;
             }
         }
         
-        if ($preferences['pomeriggio']) {
-            // Converti orari in oggetti DateTime
-            $afternoon_start = new DateTime($date_str . ' ' . $preferences['ora_inizio_pomeriggio']);
-            $afternoon_end = new DateTime($date_str . ' ' . $preferences['ora_fine_pomeriggio']);
+        // POMERIGGIO: Genera slot per orari pomeridiani
+        if ($preferences['pomeriggio'] && !empty($preferences['ora_inizio_pomeriggio']) && !empty($preferences['ora_fine_pomeriggio'])) {
+            $afternoon_start_time = $preferences['ora_inizio_pomeriggio'];
+            $afternoon_end_time = $preferences['ora_fine_pomeriggio'];
             
-            // Genera slot della durata specificata
+            error_log("Generazione slot pomeridiani: $afternoon_start_time - $afternoon_end_time");
+            
+            // Converti stringhe orario in oggetti DateTime
+            $afternoon_start = new DateTime($date_str . ' ' . $afternoon_start_time);
+            $afternoon_end = new DateTime($date_str . ' ' . $afternoon_end_time);
+            
+            // Genera slot orari da inizio a fine pomeriggio
             $current = clone $afternoon_start;
             while ($current < $afternoon_end) {
                 $slot_end = clone $current;
                 $slot_end->modify("+{$slot_duration} minutes");
                 
-                // Assicurati di non superare l'orario di fine pomeriggio
+                // Se lo slot finale supererebbe l'orario di fine, lo tronca
                 if ($slot_end > $afternoon_end) {
                     $slot_end = clone $afternoon_end;
                 }
@@ -337,14 +358,17 @@ function generate_availability($dates, $events, $preferences) {
                 
                 if (!is_slot_occupied($date, $slot, $events)) {
                     $availability[] = $slot;
+                    error_log("Aggiunto slot pomeridiano: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                } else {
+                    error_log("Slot pomeridiano occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 }
                 
-                // Passa al prossimo slot
                 $current = $slot_end;
             }
         }
     }
     
+    error_log("Generati " . count($availability) . " slot di disponibilità totali");
     return $availability;
 }
 
@@ -355,43 +379,33 @@ function is_slot_occupied($date, $slot, $events) {
     $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio']);
     $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine']);
     
-    error_log("Verifica sovrapposizione per slot: " . $slot_start->format('Y-m-d H:i') . " - " . $slot_end->format('Y-m-d H:i'));
-    
-    // Aggiungi un margine di buffer (5 min) per evitare appuntamenti troppo ravvicinati
-    $buffer_minutes = 5;
-    $slot_start_with_buffer = clone $slot_start;
-    $slot_start_with_buffer->modify("-{$buffer_minutes} minutes");
-    $slot_end_with_buffer = clone $slot_end;
-    $slot_end_with_buffer->modify("+{$buffer_minutes} minutes");
+    error_log("Verifica slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
     
     foreach ($events as $index => $event) {
-        // Verifica se l'evento è nello stesso giorno dello slot o si sovrappone
+        // Verifica se l'evento è nello stesso giorno dello slot
         $event_start_date = $event['start']->format('Y-m-d');
         $event_end_date = $event['end']->format('Y-m-d');
         
-        // Processa solo eventi relativi al giorno corrente o eventi multi-giorno
+        // Solo controlla eventi nel giorno corrente o multi-giorno che includono questo giorno
         if ($event_start_date == $date_str || $event_end_date == $date_str || 
             ($event_start_date < $date_str && $event_end_date > $date_str)) {
             
-            // Verifica se c'è sovrapposizione
-            if (($event['start'] <= $slot_end_with_buffer) && ($event['end'] >= $slot_start_with_buffer)) {
-                error_log("Sovrapposizione trovata con evento: " . 
-                          ($event['summary'] ?? 'Senza titolo') . " - " .
-                          $event['start']->format('Y-m-d H:i:s') . " - " . 
-                          $event['end']->format('Y-m-d H:i:s'));
-                return true;
-            }
+            // Debug
+            error_log("Confronto evento #$index (" . ($event['summary'] ?? 'Senza titolo') . "): " . 
+                      $event['start']->format('Y-m-d H:i:s') . " - " . 
+                      $event['end']->format('Y-m-d H:i:s'));
             
-            // Gestisci eventi di tutto il giorno
-            if ($event['start']->format('H:i:s') == '00:00:00' && 
-                $event['end']->format('H:i:s') == '00:00:00' && 
-                $event_start_date != $event_end_date) {
-                error_log("Evento giornaliero trovato: " . ($event['summary'] ?? 'Senza titolo'));
+            // Controlla sovrapposizione: l'evento si sovrappone allo slot se
+            // l'inizio dell'evento è prima della fine dello slot E
+            // la fine dell'evento è dopo l'inizio dello slot
+            if (($event['start'] < $slot_end) && ($event['end'] > $slot_start)) {
+                error_log("OCCUPATO: Sovrapposizione trovata con " . ($event['summary'] ?? 'Senza titolo'));
                 return true;
             }
         }
     }
     
+    error_log("LIBERO: Lo slot è disponibile");
     return false;
 }
 
