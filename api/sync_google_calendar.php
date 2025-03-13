@@ -138,32 +138,62 @@ function parse_ical_events($ical_content) {
     // Dividiamo il file iCal in eventi
     preg_match_all('/BEGIN:VEVENT.*?END:VEVENT/s', $ical_content, $matches);
     
-    foreach ($matches[0] as $event_text) {
+    foreach ($matches[0] as $index => $event_text) {
         $event = [];
         
+        // Estrai sommario/titolo dell'evento 
+        if (preg_match('/SUMMARY:(.*?)(?:\r\n|\n)/s', $event_text, $summary)) {
+            $event['summary'] = trim($summary[1]);
+        }
+        
         // Estrai data di inizio
-        if (preg_match('/DTSTART.*?:(.*?)(?:\r\n|$)/s', $event_text, $dtstart)) {
+        if (preg_match('/DTSTART(?:;VALUE=DATE)?.*?:(.*?)(?:\r\n|\n)/s', $event_text, $dtstart)) {
             $event['start'] = parse_ical_date($dtstart[1]);
+            $event['start_raw'] = $dtstart[1]; // Salva anche il valore originale per debug
         }
         
         // Estrai data di fine
-        if (preg_match('/DTEND.*?:(.*?)(?:\r\n|$)/s', $event_text, $dtend)) {
+        if (preg_match('/DTEND(?:;VALUE=DATE)?.*?:(.*?)(?:\r\n|\n)/s', $event_text, $dtend)) {
             $event['end'] = parse_ical_date($dtend[1]);
+            $event['end_raw'] = $dtend[1]; // Salva anche il valore originale per debug
         }
         
         // Solo se abbiamo sia inizio che fine validi
         if (!empty($event['start']) && !empty($event['end'])) {
+            // Debug log per verificare la corretta interpretazione degli eventi
+            error_log("Evento #$index importato: " . 
+                      ($event['summary'] ?? 'Senza titolo') . " - " . 
+                      $event['start']->format('Y-m-d H:i:s') . " - " . 
+                      $event['end']->format('Y-m-d H:i:s'));
+            
             $events[] = $event;
         }
     }
     
+    error_log("Totale eventi importati: " . count($events));
     return $events;
 }
 
 // Funzione per convertire il formato data iCal in DateTime
 function parse_ical_date($date_string) {
-    // Gestisci date con timezone
-    if (strpos($date_string, 'T') !== false) {
+    // Gestione eventi per tutto il giorno (formato solo data senza T)
+    if (strlen($date_string) == 8 && strpos($date_string, 'T') === false) {
+        // Formato: 20231215 (all-day event)
+        if (preg_match('/(\d{4})(\d{2})(\d{2})/', $date_string, $matches)) {
+            $date = new DateTime('now', new DateTimeZone('Europe/Rome'));
+            $date->setDate($matches[1], $matches[2], $matches[3]);
+            
+            // Per gli eventi di tutto il giorno, imposta ore appropriate
+            if (substr($date_string, -1) !== 'Z') {
+                // Data di inizio → mezzanotte
+                $date->setTime(0, 0, 0);
+            }
+            
+            return $date;
+        }
+    } 
+    // Gestione eventi con orario specifico
+    else if (strpos($date_string, 'T') !== false) {
         // Formato: 20231215T130000Z
         $pattern = '/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/';
         if (preg_match($pattern, $date_string, $matches)) {
@@ -174,38 +204,28 @@ function parse_ical_date($date_string) {
             $minute = $matches[5];
             $second = $matches[6];
             
-            // Crea la data nel timezone corretto
+            // Se ha Z alla fine, è in UTC e dobbiamo convertirlo
             if (substr($date_string, -1) === 'Z') {
-                // Se è in UTC (indicato da Z), crea la data in UTC
-                $date = new DateTime(null, new DateTimeZone('UTC'));
+                $date = new DateTime('now', new DateTimeZone('UTC'));
                 $date->setDate($year, $month, $day);
                 $date->setTime($hour, $minute, $second);
-                // Poi converti in timezone locale per Italia
                 $date->setTimezone(new DateTimeZone('Europe/Rome'));
-            } else {
-                // Se non ha Z, usiamo il timezone locale
-                $date = new DateTime(null, new DateTimeZone('Europe/Rome'));
+                
+                // Debug della conversione di timezone
+                error_log("Conversione UTC→Europe/Rome: $date_string → " . $date->format('Y-m-d H:i:s'));
+            } 
+            // Altrimenti è già nell'ora locale
+            else {
+                $date = new DateTime('now', new DateTimeZone('Europe/Rome'));
                 $date->setDate($year, $month, $day);
                 $date->setTime($hour, $minute, $second);
             }
             
             return $date;
         }
-    } else {
-        // Formato: 20231215 (solo data)
-        if (preg_match('/(\d{4})(\d{2})(\d{2})/', $date_string, $matches)) {
-            $year = $matches[1];
-            $month = $matches[2];
-            $day = $matches[3];
-            
-            $date = new DateTime(null, new DateTimeZone('Europe/Rome'));
-            $date->setDate($year, $month, $day);
-            $date->setTime(0, 0, 0);
-            
-            return $date;
-        }
     }
     
+    error_log("Formato data non riconosciuto: $date_string");
     return null;
 }
 
@@ -305,32 +325,36 @@ function is_slot_occupied($date, $slot, $events) {
     $slot_start->setTime((int)$start_hour, (int)$start_minute);
     $slot_end->setTime((int)$end_hour, (int)$end_minute);
     
-    error_log("Verifica sovrapposizione per slot: " . $slot_start->format('Y-m-d H:i') . " - " . $slot_end->format('Y-m-d H:i'));
+    $slot_date = $slot_start->format('Y-m-d');
+    error_log("Verifica slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
     
     foreach ($events as $index => $event) {
-        // Stampa dettagli dell'evento per debug
-        error_log("Evento #$index: " . $event['start']->format('Y-m-d H:i') . " - " . $event['end']->format('Y-m-d H:i'));
+        $event_start_date = $event['start']->format('Y-m-d');
+        $event_end_date = $event['end']->format('Y-m-d');
         
-        // Verifica se l'evento è nello stesso giorno dello slot
-        $event_day = $event['start']->format('Y-m-d');
-        $slot_day = $slot_start->format('Y-m-d');
-        
-        if ($event_day == $slot_day) {
-            // Verifica se c'è sovrapposizione tra l'evento e lo slot
-            if (
-                ($event['start'] <= $slot_end && $event['end'] >= $slot_start) ||
-                ($slot_start <= $event['end'] && $slot_end >= $event['start'])
-            ) {
-                // Debug info
-                error_log("Sovrapposizione trovata! Slot bloccato: " . $slot_start->format('Y-m-d H:i') . " - " . $slot_end->format('Y-m-d H:i'));
-                
-                // C'è sovrapposizione
+        // Processa solo eventi relativi al giorno corrente o eventi multi-giorno
+        if ($event_start_date == $slot_date || $event_end_date == $slot_date || 
+            ($event_start_date < $slot_date && $event_end_date > $slot_date)) {
+            
+            // Controlla se c'è sovrapposizione
+            if (($event['start'] < $slot_end) && ($event['end'] > $slot_start)) {
+                error_log("Sovrapposizione trovata con evento: " . 
+                          ($event['summary'] ?? 'Senza titolo') . " - " .
+                          $event['start']->format('Y-m-d H:i:s') . " - " . 
+                          $event['end']->format('Y-m-d H:i:s'));
+                return true;
+            }
+            
+            // Gestisci eventi di tutto il giorno
+            if ($event['start']->format('H:i:s') == '00:00:00' && 
+                $event['end']->format('H:i:s') == '00:00:00' && 
+                $event_start_date != $event_end_date) {
+                error_log("Evento giornaliero trovato: " . ($event['summary'] ?? 'Senza titolo'));
                 return true;
             }
         }
     }
     
-    // Nessuna sovrapposizione trovata
     return false;
 }
 
@@ -378,25 +402,22 @@ function save_availability($conn, $teacher_email, $availability) {
             if ($check_result->num_rows == 0) {
                 // Crea anche la lezione corrispondente
                 $date_str = $slot['data'];
-                $start_time_str = $date_str . ' ' . $slot['ora_inizio'];
-                $end_time_str = $date_str . ' ' . $slot['ora_fine'];
-                $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); // Capitalizza il nome del giorno
+                
+                // Formatta correttamente le date per MySQL
+                $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']);
+                
+                // Assicurati che il formato sia corretto indipendentemente dalla locale del server
+                $formatted_date = date('Y-m-d', strtotime($date_str));
+                $start_time_str = $formatted_date . ' ' . $slot['ora_inizio'] . ':00';
+                $end_time_str = $formatted_date . ' ' . $slot['ora_fine'] . ':00';
+                
+                error_log("Inserendo lezione: $titolo - $start_time_str - $end_time_str");
                 
                 $lesson_query = "INSERT INTO Lezioni 
                                 (teacher_email, titolo, start_time, end_time, stato) 
                                 VALUES (?, ?, ?, ?, 'disponibile')";
                 $lesson_stmt = $conn->prepare($lesson_query);
-                
-                // Assicuriamoci che le date siano nel formato corretto per MySQL
-                $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); 
-                $start_time_str = date('Y-m-d H:i:s', strtotime($date_str . ' ' . $slot['ora_inizio']));
-                $end_time_str = date('Y-m-d H:i:s', strtotime($date_str . ' ' . $slot['ora_fine']));
-                
-                // Debug
-                error_log("Inserendo lezione: $start_time_str - $end_time_str");
-                
-                $lesson_stmt->bind_param(
-                    "ssss", 
+                $lesson_stmt->bind_param("ssss", 
                     $teacher_email, 
                     $titolo,
                     $start_time_str,

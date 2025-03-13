@@ -1,5 +1,4 @@
 <?php
-// Script per testare l'elaborazione degli eventi di Google Calendar
 session_start();
 require_once '../connessione.php';
 
@@ -26,12 +25,19 @@ if (!$row || empty($row['google_calendar_link'])) {
     exit;
 }
 
-// Scarica il contenuto del calendario
-$ical_content = @file_get_contents($row['google_calendar_link']);
+// Ottieni timeframe di debug (default: prossimi 14 giorni)
+$days = isset($_GET['days']) ? (int)$_GET['days'] : 14;
+$today = new DateTime('now', new DateTimeZone('Europe/Rome'));
+$end_date = clone $today;
+$end_date->modify("+$days days");
+
+// Scarica e analizza il calendario
+$calendar_url = $row['google_calendar_link'];
+$ical_content = @file_get_contents($calendar_url);
 if ($ical_content === false) {
     // Prova con cURL se file_get_contents fallisce
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $row['google_calendar_link']);
+    curl_setopt($ch, CURLOPT_URL, $calendar_url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -39,91 +45,131 @@ if ($ical_content === false) {
     curl_close($ch);
 }
 
-if (empty($ical_content)) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Impossibile scaricare il calendario']);
-    exit;
-}
-
-// Analisi eventi
+// Analizza gli eventi
 $events = [];
+$all_events = [];
 preg_match_all('/BEGIN:VEVENT.*?END:VEVENT/s', $ical_content, $matches);
 
-// Informazioni sugli eventi trovati
-$processed_events = [];
+// Per ciascun evento
 foreach ($matches[0] as $event_text) {
     $event = [];
     
-    // Estrai summary (titolo)
-    if (preg_match('/SUMMARY:(.*?)(?:\r\n|\r|\n)/s', $event_text, $summary)) {
-        $event['summary'] = trim($summary[1]);
+    // Estrai il titolo
+    if (preg_match('/SUMMARY:(.*?)(?:\r\n|\n)/s', $event_text, $summary)) {
+        $event['titolo'] = trim($summary[1]);
+    } else {
+        $event['titolo'] = 'Evento senza titolo';
     }
     
-    // Estrai data di inizio
-    if (preg_match('/DTSTART.*?:(.*?)(?:\r\n|\r|\n)/s', $event_text, $dtstart)) {
-        $date_str = $dtstart[1];
-        $event['start_raw'] = $date_str;
+    // Estrai data inizio
+    if (preg_match('/DTSTART(?:;VALUE=DATE)?.*?:(.*?)(?:\r\n|\n)/s', $event_text, $dtstart)) {
+        $start_raw = $dtstart[1];
+        $event['inizio_raw'] = $start_raw;
         
-        if (strpos($date_str, 'T') !== false) {
-            // Format: 20230405T100000Z
-            if (preg_match('/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/', $date_str, $matches)) {
-                $datetime = $matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' ' . 
-                           $matches[4] . ':' . $matches[5] . ':' . $matches[6];
-                if (substr($date_str, -1) === 'Z') {
-                    // Convert UTC to local time
-                    $dt = new DateTime($datetime, new DateTimeZone('UTC'));
-                    $dt->setTimezone(new DateTimeZone('Europe/Rome'));
-                    $event['start'] = $dt->format('Y-m-d H:i:s');
-                } else {
-                    $event['start'] = $datetime;
-                }
-            }
+        // Format date based on whether it's all-day or timed
+        if (strlen($start_raw) == 8) {
+            // All day
+            $event['inizio'] = substr($start_raw, 0, 4) . '-' . 
+                             substr($start_raw, 4, 2) . '-' . 
+                             substr($start_raw, 6, 2) . ' 00:00:00';
+            $event['tutto_giorno'] = true;
         } else {
-            // Format: 20230405 (all-day event)
-            if (preg_match('/(\d{4})(\d{2})(\d{2})/', $date_str, $matches)) {
-                $event['start'] = $matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' 00:00:00';
+            // Event with time
+            $year = substr($start_raw, 0, 4);
+            $month = substr($start_raw, 4, 2);
+            $day = substr($start_raw, 6, 2);
+            $hour = substr($start_raw, 9, 2);
+            $minute = substr($start_raw, 11, 2);
+            $second = substr($start_raw, 13, 2);
+            
+            if (substr($start_raw, -1) === 'Z') {
+                // Convert from UTC to local
+                $dt = new DateTime("{$year}-{$month}-{$day} {$hour}:{$minute}:{$second}", new DateTimeZone('UTC'));
+                $dt->setTimezone(new DateTimeZone('Europe/Rome'));
+                $event['inizio'] = $dt->format('Y-m-d H:i:s');
+            } else {
+                $event['inizio'] = "{$year}-{$month}-{$day} {$hour}:{$minute}:{$second}";
+            }
+            $event['tutto_giorno'] = false;
+        }
+    }
+    
+    // Estrai data fine
+    if (preg_match('/DTEND(?:;VALUE=DATE)?.*?:(.*?)(?:\r\n|\n)/s', $event_text, $dtend)) {
+        $end_raw = $dtend[1];
+        $event['fine_raw'] = $end_raw;
+        
+        // Format date based on whether it's all-day or timed
+        if (strlen($end_raw) == 8) {
+            // All day
+            $event['fine'] = substr($end_raw, 0, 4) . '-' . 
+                          substr($end_raw, 4, 2) . '-' . 
+                          substr($end_raw, 6, 2) . ' 23:59:59';
+        } else {
+            // Event with time
+            $year = substr($end_raw, 0, 4);
+            $month = substr($end_raw, 4, 2);
+            $day = substr($end_raw, 6, 2);
+            $hour = substr($end_raw, 9, 2);
+            $minute = substr($end_raw, 11, 2);
+            $second = substr($end_raw, 13, 2);
+            
+            if (substr($end_raw, -1) === 'Z') {
+                // Convert from UTC to local
+                $dt = new DateTime("{$year}-{$month}-{$day} {$hour}:{$minute}:{$second}", new DateTimeZone('UTC'));
+                $dt->setTimezone(new DateTimeZone('Europe/Rome'));
+                $event['fine'] = $dt->format('Y-m-d H:i:s');
+            } else {
+                $event['fine'] = "{$year}-{$month}-{$day} {$hour}:{$minute}:{$second}";
             }
         }
     }
     
-    // Estrai data di fine
-    if (preg_match('/DTEND.*?:(.*?)(?:\r\n|\r|\n)/s', $event_text, $dtend)) {
-        $date_str = $dtend[1];
-        $event['end_raw'] = $date_str;
+    // Aggiungi all'elenco completo
+    $all_events[] = $event;
+    
+    // Controlla se l'evento è nel periodo di interesse
+    if (isset($event['inizio']) && isset($event['fine'])) {
+        $event_start = new DateTime($event['inizio']);
+        $event_end = new DateTime($event['fine']);
         
-        if (strpos($date_str, 'T') !== false) {
-            // Format: 20230405T110000Z
-            if (preg_match('/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?/', $date_str, $matches)) {
-                $datetime = $matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' ' . 
-                           $matches[4] . ':' . $matches[5] . ':' . $matches[6];
-                if (substr($date_str, -1) === 'Z') {
-                    // Convert UTC to local time
-                    $dt = new DateTime($datetime, new DateTimeZone('UTC'));
-                    $dt->setTimezone(new DateTimeZone('Europe/Rome'));
-                    $event['end'] = $dt->format('Y-m-d H:i:s');
-                } else {
-                    $event['end'] = $datetime;
-                }
-            }
-        } else {
-            // Format: 20230405 (all-day event)
-            if (preg_match('/(\d{4})(\d{2})(\d{2})/', $date_str, $matches)) {
-                $event['end'] = $matches[1] . '-' . $matches[2] . '-' . $matches[3] . ' 23:59:59';
-            }
+        // Includi eventi che iniziano o terminano nel periodo di interesse
+        if (($event_start >= $today && $event_start <= $end_date) || 
+            ($event_end >= $today && $event_end <= $end_date) ||
+            ($event_start <= $today && $event_end >= $end_date)) {
+            $events[] = $event;
         }
     }
-    
-    $processed_events[] = $event;
 }
 
-// Restituisci gli eventi analizzati
+// Recupera preferenze disponibilità
+$pref_query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
+$stmt = $conn->prepare($pref_query);
+$stmt->bind_param("s", $teacher_email);
+$stmt->execute();
+$preferences = $stmt->get_result()->fetch_assoc() ?: [
+    'weekend' => false,
+    'mattina' => true,
+    'pomeriggio' => true,
+    'ora_inizio_mattina' => '08:00:00',
+    'ora_fine_mattina' => '13:00:00',
+    'ora_inizio_pomeriggio' => '14:00:00',
+    'ora_fine_pomeriggio' => '19:00:00'
+];
+
+// Restituisci i risultati
 header('Content-Type: application/json');
 echo json_encode([
-    'success' => true, 
-    'calendar_link' => $row['google_calendar_link'],
-    'events_count' => count($processed_events),
-    'events' => $processed_events,
-    'today' => date('Y-m-d H:i:s'),
-    'timezone' => date_default_timezone_get()
+    'success' => true,
+    'calendar_url' => $calendar_url,
+    'today' => $today->format('Y-m-d H:i:s'),
+    'end_date' => $end_date->format('Y-m-d H:i:s'),
+    'timezone' => date_default_timezone_get(),
+    'preferences' => $preferences,
+    'events_count' => [
+        'total' => count($all_events),
+        'in_range' => count($events)
+    ],
+    'events' => $events
 ]);
 ?>
