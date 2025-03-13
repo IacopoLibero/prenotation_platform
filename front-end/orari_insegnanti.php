@@ -159,6 +159,16 @@ $result = $stmt->get_result();
             background-color: #f8f9fa;
             opacity: 0.7;
         }
+
+        .week-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f1f8ff;
+            border-left: 4px solid #2da0a8;
+            border-radius: 4px;
+            font-size: 1.2rem;
+        }
     </style>
 </head>
 <body>
@@ -213,18 +223,18 @@ $result = $stmt->get_result();
 
     <script>
         // Global variables for pagination
-        let currentPage = 1;
-        let daysPerPage = 7;
+        let currentWeek = 0; // Week offset (0 = current week, 1 = next week, etc.)
         let allAvailability = [];
         let currentTeacherEmail = '';
+        let groupedByWeek = {}; // Store availability grouped by week
         
         document.getElementById('teacherSelect').addEventListener('change', function() {
             currentTeacherEmail = this.value;
             const hasCalendar = this.options[this.selectedIndex].getAttribute('data-has-calendar') === '1';
             const calendarInfoBox = document.getElementById('calendarInfoBox');
             
-            // Reset pagination
-            currentPage = 1;
+            // Reset pagination to current week
+            currentWeek = 0;
             
             // Mostra o nascondi l'info box del calendario
             calendarInfoBox.style.display = hasCalendar ? 'block' : 'none';
@@ -263,8 +273,11 @@ $result = $stmt->get_result();
                         // Store all availability data
                         allAvailability = data.availability;
                         
-                        // Render the current page
-                        renderAvailabilityPage(currentPage);
+                        // Group availability data by week
+                        groupAvailabilityByWeek();
+                        
+                        // Render the current week
+                        renderWeekAvailability(currentWeek);
                     } else {
                         // Messaggio personalizzato in base a se l'insegnante usa Google Calendar o meno
                         const container = document.getElementById('availabilityContainer');
@@ -294,12 +307,55 @@ $result = $stmt->get_result();
                 });
         }
         
-        function renderAvailabilityPage(page) {
-            const container = document.getElementById('availabilityContainer');
-            const startIdx = (page - 1) * daysPerPage;
-            const endIdx = Math.min(startIdx + daysPerPage, allAvailability.length);
+        function groupAvailabilityByWeek() {
+            groupedByWeek = {};
             
-            // Group availability by date
+            // Get today's date
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Calculate the start of the current week (Sunday/Monday depending on locale)
+            const firstDayOfWeek = today.getDate() - today.getDay() + (today.getDay() === 0 ? -6 : 1); // Adjust for Monday as first day
+            
+            allAvailability.forEach(slot => {
+                const slotDate = new Date(slot.data);
+                
+                // Calculate which week this slot belongs to (0 = current week, 1 = next week, etc.)
+                const weekStart = new Date(today);
+                weekStart.setDate(firstDayOfWeek);
+                
+                // How many weeks from current week
+                const weekOffset = Math.floor((slotDate - weekStart) / (7 * 24 * 60 * 60 * 1000));
+                
+                // Initialize this week's array if it doesn't exist
+                if (!groupedByWeek[weekOffset]) {
+                    groupedByWeek[weekOffset] = [];
+                }
+                
+                // Add slot to appropriate week
+                groupedByWeek[weekOffset].push(slot);
+            });
+            
+            console.log("Grouped by week:", groupedByWeek);
+        }
+        
+        function renderWeekAvailability(weekOffset) {
+            const container = document.getElementById('availabilityContainer');
+            
+            // Get slots for the specified week
+            const weekSlots = groupedByWeek[weekOffset] || [];
+            
+            if (weekSlots.length === 0) {
+                container.innerHTML = `
+                    <div class="no-availability">
+                        <p>Nessuna disponibilità per questa settimana.</p>
+                    </div>
+                    ${renderPagination(weekOffset)}
+                `;
+                return;
+            }
+            
+            // Group by date
             const groupedByDate = {};
             const dayNames = {
                 'lunedi': 'Lunedì',
@@ -311,10 +367,7 @@ $result = $stmt->get_result();
                 'domenica': 'Domenica'
             };
             
-            // Only group the dates for current page
-            const currentPageAvailability = allAvailability.slice(startIdx, endIdx);
-            
-            currentPageAvailability.forEach(slot => {
+            weekSlots.forEach(slot => {
                 if (!groupedByDate[slot.data]) {
                     groupedByDate[slot.data] = {
                         day: dayNames[slot.giorno_settimana],
@@ -325,9 +378,15 @@ $result = $stmt->get_result();
                 groupedByDate[slot.data].slots.push(slot);
             });
             
-            // Generate HTML for this page's dates
-            let html = '';
-            const sortedDates = Object.keys(groupedByDate).sort(); // Sort by date
+            // Generate HTML for this week's dates
+            let html = '<h3 class="week-header">Settimana ';
+            if (weekOffset === 0) html += 'corrente';
+            else if (weekOffset === 1) html += 'prossima';
+            else html += (weekOffset + 1);
+            html += '</h3>';
+            
+            // Sort dates chronologically
+            const sortedDates = Object.keys(groupedByDate).sort();
             
             sortedDates.forEach(date => {
                 const dayData = groupedByDate[date];
@@ -355,36 +414,58 @@ $result = $stmt->get_result();
                 html += `</div>`;
             });
             
-            // Add pagination controls if needed
-            if (allAvailability.length > daysPerPage) {
-                const totalPages = Math.ceil(allAvailability.length / daysPerPage);
-                
-                html += `
-                    <div class="pagination">
-                        <button 
-                            class="pagination-btn" 
-                            onclick="changePage(${page - 1})"
-                            ${page === 1 ? 'disabled' : ''}>
-                            &laquo; Precedente
-                        </button>
-                        <span class="page-indicator">Pagina ${page} di ${totalPages}</span>
-                        <button 
-                            class="pagination-btn" 
-                            onclick="changePage(${page + 1})"
-                            ${page >= totalPages ? 'disabled' : ''}>
-                            Successivo &raquo;
-                        </button>
-                    </div>
-                `;
-            }
+            // Add pagination controls
+            html += renderPagination(weekOffset);
             
             container.innerHTML = html;
         }
         
-        function changePage(newPage) {
-            if (newPage >= 1 && newPage <= Math.ceil(allAvailability.length / daysPerPage)) {
-                currentPage = newPage;
-                renderAvailabilityPage(currentPage);
+        function renderPagination(currentWeek) {
+            // Calculate total number of weeks
+            const totalWeeks = Object.keys(groupedByWeek).length;
+            
+            // Find min and max week numbers
+            let minWeek = Infinity;
+            let maxWeek = -Infinity;
+            Object.keys(groupedByWeek).forEach(week => {
+                const weekNum = parseInt(week);
+                minWeek = Math.min(minWeek, weekNum);
+                maxWeek = Math.max(maxWeek, weekNum);
+            });
+            
+            // Build pagination HTML
+            let paginationHtml = `
+                <div class="pagination">
+                    <button 
+                        class="pagination-btn" 
+                        onclick="changeWeek(${currentWeek - 1})"
+                        ${currentWeek <= minWeek ? 'disabled' : ''}>
+                        &laquo; Settimana precedente
+                    </button>
+                    <span class="page-indicator">Settimana `;
+            
+            if (currentWeek === 0) paginationHtml += 'corrente';
+            else if (currentWeek === 1) paginationHtml += 'prossima';
+            else paginationHtml += (currentWeek + 1);
+            
+            paginationHtml += `</span>
+                    <button 
+                        class="pagination-btn" 
+                        onclick="changeWeek(${currentWeek + 1})"
+                        ${currentWeek >= maxWeek ? 'disabled' : ''}>
+                        Settimana successiva &raquo;
+                    </button>
+                </div>
+            `;
+            
+            return paginationHtml;
+        }
+        
+        function changeWeek(newWeek) {
+            // Check if the requested week exists
+            if (groupedByWeek[newWeek]) {
+                currentWeek = newWeek;
+                renderWeekAvailability(currentWeek);
                 window.scrollTo(0, 0); // Scroll to top
             }
         }

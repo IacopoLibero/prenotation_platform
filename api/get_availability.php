@@ -26,7 +26,7 @@ $query = "SELECT d.giorno_settimana, d.ora_inizio, d.ora_fine,
           FROM Disponibilita d
           JOIN Professori p ON d.teacher_email = p.email
           LEFT JOIN Lezioni l ON d.teacher_email = l.teacher_email 
-                AND DATE_FORMAT(l.start_time, '%Y-%m-%d') = DATE_FORMAT(CURDATE() + INTERVAL 
+                AND DATE(l.start_time) = DATE(CURDATE() + INTERVAL 
                     CASE 
                         WHEN DAYOFWEEK(CURDATE()) <= CASE 
                             WHEN d.giorno_settimana = 'lunedi' THEN 2
@@ -55,8 +55,8 @@ $query = "SELECT d.giorno_settimana, d.ora_inizio, d.ora_fine,
                             WHEN d.giorno_settimana = 'sabato' THEN 14
                             WHEN d.giorno_settimana = 'domenica' THEN 8
                         END - DAYOFWEEK(CURDATE())
-                    END DAY, '%Y-%m-%d')
-                AND TIME_FORMAT(l.start_time, '%H:%i') = d.ora_inizio
+                    END DAY)
+                AND TIME(l.start_time) = d.ora_inizio
           WHERE d.teacher_email = ? 
           ORDER BY FIELD(d.giorno_settimana, 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'), 
           d.ora_inizio";
