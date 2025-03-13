@@ -1,4 +1,6 @@
 <?php
+// Add this at the very beginning to prevent any output before headers
+ob_start();
 session_start();
 require_once '../connessione.php';
 
@@ -6,6 +8,7 @@ require_once '../connessione.php';
 if (!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore') {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Non autorizzato']);
+    ob_end_flush();
     exit;
 }
 
@@ -25,6 +28,7 @@ $data = $result->fetch_assoc();
 if (!$data || empty($data['google_calendar_link'])) {
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => 'Nessun calendario Google configurato']);
+    ob_end_flush();
     exit;
 }
 
@@ -56,6 +60,7 @@ if ($ical_content === false) {
                 'message' => 'Impossibile accedere al calendario. Verifica che il link sia corretto e pubblico.',
                 'debug_info' => "Errore cURL: $curl_error, HTTP code: $http_code"
             ]);
+            ob_end_flush();
             exit;
         }
     } else {
@@ -64,6 +69,7 @@ if ($ical_content === false) {
             'success' => false, 
             'message' => 'Impossibile accedere al calendario. La funzione cURL non è disponibile sul server.'
         ]);
+        ob_end_flush();
         exit;
     }
 }
@@ -76,6 +82,7 @@ if (empty($ical_content) || strpos($ical_content, 'BEGIN:VCALENDAR') === false) 
         'message' => 'Il contenuto scaricato non sembra essere un calendario valido.',
         'debug_info' => "Lunghezza contenuto: " . strlen($ical_content) . " bytes"
     ]);
+    ob_end_flush();
     exit;
 }
 
@@ -338,5 +345,12 @@ function save_availability($conn, $teacher_email, $availability) {
     }
     
     return $success;
+}
+
+// At the end of the file, make sure to flush output
+if (!ob_get_contents()) {
+    ob_end_clean();
+} else {
+    ob_end_flush();
 }
 ?>

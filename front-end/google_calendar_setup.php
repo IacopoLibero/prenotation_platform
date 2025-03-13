@@ -263,33 +263,51 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Errore nella risposta del server: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                
                 if (data.success) {
                     alert(data.message);
                     // Dopo il salvataggio, sincronizziamo il calendario
                     return fetch('../api/sync_google_calendar.php');
                 } else {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
                     alert(data.message);
                     throw new Error(data.message);
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Errore nella sincronizzazione del calendario: ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
                 if (data.success) {
                     alert('Calendario sincronizzato con successo. Nuove disponibilità generate.');
+                    // Reindirizzamento opzionale
                     window.location.href = 'disponibilita.php';
                 } else {
+                    // Mostra il messaggio di errore
                     alert('Errore durante la sincronizzazione: ' + data.message);
+                    if (data.debug_info) {
+                        console.error('Debug info:', data.debug_info);
+                    }
                 }
             })
             .catch(error => {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
-                console.error('Error:', error);
+                console.error('Errore:', error);
+                alert('Si è verificato un errore: ' + error.message);
             });
         });
     </script>
