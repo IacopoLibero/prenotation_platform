@@ -316,8 +316,9 @@ function save_availability($conn, $teacher_email, $availability) {
     $success = true;
     error_log("Salvataggio di " . count($availability) . " disponibilità per $teacher_email");
     
-    // Prepara la query di inserimento
-    $query = "INSERT INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
+    // Modifica la query per usare REPLACE INTO invece di INSERT
+    // REPLACE INTO cancellerà automaticamente eventuali righe duplicate prima di inserire le nuove
+    $query = "REPLACE INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
               VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($query);
     
@@ -334,28 +335,41 @@ function save_availability($conn, $teacher_email, $availability) {
             error_log("Errore nell'inserimento della disponibilità: " . $stmt->error);
             $success = false;
         } else {
-            // Crea anche la lezione corrispondente
-            // Adattata per la struttura effettiva della tabella Lezioni
-            $date_str = $slot['data'];
-            $start_time_str = $date_str . ' ' . $slot['ora_inizio'];
-            $end_time_str = $date_str . ' ' . $slot['ora_fine'];
-            $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); // Capitalizza il nome del giorno
+            // Prima controlla se esiste già una lezione per questa disponibilità
+            $check_query = "SELECT id FROM Lezioni 
+                            WHERE teacher_email = ? 
+                            AND start_time = ? 
+                            AND stato = 'disponibile'";
+            $check_stmt = $conn->prepare($check_query);
+            $start_time_str = $slot['data'] . ' ' . $slot['ora_inizio'];
+            $check_stmt->bind_param("ss", $teacher_email, $start_time_str);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
             
-            $lesson_query = "INSERT INTO Lezioni 
-                            (teacher_email, titolo, start_time, end_time, stato) 
-                            VALUES (?, ?, ?, ?, 'disponibile')";
-            $lesson_stmt = $conn->prepare($lesson_query);
-            $lesson_stmt->bind_param(
-                "ssss", 
-                $teacher_email, 
-                $titolo,
-                $start_time_str,
-                $end_time_str
-            );
-            
-            if (!$lesson_stmt->execute()) {
-                error_log("Errore nell'inserimento della lezione: " . $lesson_stmt->error);
-                $success = false;
+            // Se non esiste già, crea la lezione
+            if ($check_result->num_rows == 0) {
+                // Crea anche la lezione corrispondente
+                $date_str = $slot['data'];
+                $start_time_str = $date_str . ' ' . $slot['ora_inizio'];
+                $end_time_str = $date_str . ' ' . $slot['ora_fine'];
+                $titolo = "Disponibilità " . ucfirst($slot['giorno_settimana']); // Capitalizza il nome del giorno
+                
+                $lesson_query = "INSERT INTO Lezioni 
+                                (teacher_email, titolo, start_time, end_time, stato) 
+                                VALUES (?, ?, ?, ?, 'disponibile')";
+                $lesson_stmt = $conn->prepare($lesson_query);
+                $lesson_stmt->bind_param(
+                    "ssss", 
+                    $teacher_email, 
+                    $titolo,
+                    $start_time_str,
+                    $end_time_str
+                );
+                
+                if (!$lesson_stmt->execute()) {
+                    error_log("Errore nell'inserimento della lezione: " . $lesson_stmt->error);
+                    $success = false;
+                }
             }
         }
     }
