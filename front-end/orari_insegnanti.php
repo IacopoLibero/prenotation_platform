@@ -216,46 +216,46 @@ $result = $stmt->get_result();
                         let html = '';
                         for (const day in groupedByDay) {
                             html += `
-                                <div class="day-card">slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
-                                    <h3 class="day-header">${dayNames[day]}</h3>  </div>
-                            `; `;
-                            });
+                                <div class="day-card">
+                                    <h3 class="day-header">${dayNames[day]}</h3>
+                            `;
+                            
                             groupedByDay[day].forEach(slot => {
-                                html += `   html += `</div>`;
-                                    <div class="time-slot">}
+                                html += `
+                                    <div class="time-slot">
                                         <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                                        ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}ainer.innerHTML = html;
+                                        <span class="date-badge">${slot.data_formattata}</span>
+                                        ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
                                     </div>
-                                `;ase a se l'insegnante usa Google Calendar o meno
-                            });ar) {
+                                `;
+                            });
                             
                             html += `</div>`;
-                        }izzate.</p>
-                                    <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
-                                </div>ner.innerHTML = html;
-                            `;
-                        } else { in base a se l'insegnante usa Google Calendar o meno
+                        }
+                        
+                        container.innerHTML = html;
+                    } else {
+                        // Messaggio personalizzato in base a se l'insegnante usa Google Calendar o meno
+                        if (data.uses_google_calendar) {
                             container.innerHTML = `
                                 <div class="no-availability">
-                                    <p>Questo insegnante non ha ancora impostato la sua disponibilità.</p>lass="no-availability">
-                                </div>      <p>Questo insegnante utilizza Google Calendar ma non ha ancora disponibilità sincronizzate.</p>
-                            `;           <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
-                        }           </div>
-                    }          `;
+                                    <p>Questo insegnante utilizza Google Calendar ma non ha ancora disponibilità sincronizzate.</p>
+                                    <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
+                                </div>
+                            `;
+                        } else {
+                            container.innerHTML = `
+                                <div class="no-availability">
+                                    <p>Questo insegnante non ha ancora impostato la sua disponibilità.</p>
+                                </div>
+                            `;
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('availabilityContainer').innerHTML = `nte non ha ancora impostato la sua disponibilità.</p>
+                    document.getElementById('availabilityContainer').innerHTML = `
                         <div class="no-availability">
-                            <p>Si è verificato un errore durante il recupero della disponibilità: ${error.message}</p>
-                        </div>  }
-                    `; }
-                });     })
-        });   .catch(error => {
-    </script>             console.error('Error:', error);
-</body>             document.getElementById('availabilityContainer').innerHTML = `
-</html>                        <div class="no-availability">
-
                             <p>Si è verificato un errore durante il recupero della disponibilità: ${error.message}</p>
                         </div>
                     `;
