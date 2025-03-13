@@ -170,7 +170,12 @@ function parse_ical_events($ical_content) {
         }
     }
     
-    error_log("Totale eventi importati: " . count($events));
+    // Ordina gli eventi per data di inizio (cronologicamente)
+    usort($events, function($a, $b) {
+        return $a['start'] <=> $b['start'];
+    });
+    
+    error_log("Totale eventi importati: " . count($events) . " (ordinati cronologicamente)");
     return $events;
 }
 

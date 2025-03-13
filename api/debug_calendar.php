@@ -144,6 +144,23 @@ foreach ($matches[0] as $event_text) {
     }
 }
 
+// Ordina gli eventi per data di inizio
+usort($events, function($a, $b) {
+    $date_a = new DateTime($a['inizio']);
+    $date_b = new DateTime($b['inizio']);
+    return $date_a <=> $date_b;
+});
+
+// Ordina anche l'elenco completo
+usort($all_events, function($a, $b) {
+    if (!isset($a['inizio']) || !isset($b['inizio'])) {
+        return 0;
+    }
+    $date_a = new DateTime($a['inizio']);
+    $date_b = new DateTime($b['inizio']);
+    return $date_a <=> $date_b;
+});
+
 // Recupera preferenze disponibilità
 $pref_query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
 $stmt = $conn->prepare($pref_query);
