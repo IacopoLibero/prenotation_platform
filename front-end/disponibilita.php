@@ -1,4 +1,9 @@
 <?php
+// Add cache-busting headers
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 session_start();
 if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
     header('Location: ../index.php');
@@ -7,7 +12,12 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
 
 require_once '../connessione.php';
 
-// Ottieni le disponibilità del professore
+// Add debug function 
+function debug_log($message) {
+    echo "<!-- DEBUG: $message -->\n";
+}
+
+// Ottieni le disponibilità del professore con query migliorata
 $email = $_SESSION['email'];
 $query = "SELECT d.id, d.giorno_settimana, d.ora_inizio, d.ora_fine 
           FROM Disponibilita d 
@@ -19,6 +29,20 @@ $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
+
+// Count available slots for debugging
+$total_slots = $result->num_rows;
+debug_log("Totale slot disponibilità trovati: $total_slots");
+
+// Get lesson counts too
+$lessons_query = "SELECT COUNT(*) as count FROM Lezioni WHERE teacher_email = ? AND stato = 'disponibile'";
+$lessons_stmt = $conn->prepare($lessons_query);
+$lessons_stmt->bind_param("s", $email);
+$lessons_stmt->execute();
+$lessons_result = $lessons_stmt->get_result();
+$lessons_row = $lessons_result->fetch_assoc();
+$total_lessons = $lessons_row['count'];
+debug_log("Totale lezioni disponibili trovate: $total_lessons");
 
 // Recupera il link di calendario Google
 $query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
@@ -104,8 +128,12 @@ $days_of_week = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato
 $today_day_num = (int)(new DateTime())->format('N');
 $today = new DateTime();
 
+// Track days with data
+$days_with_data = [];
+
 while ($row = $result->fetch_assoc()) {
     $day = $row['giorno_settimana'];
+    $days_with_data[$day] = true;
     
     // Get dates for this weekday for the next 3 weeks
     $dates = get_dates_for_weekday_next_weeks($day);
@@ -129,6 +157,10 @@ while ($row = $result->fetch_assoc()) {
     }
 }
 
+// Debug the availability data structure
+debug_log("Giorni con dati: " . implode(", ", array_keys($days_with_data)));
+debug_log("Settimane con dati: " . count($availability_by_week));
+
 // Translate day names
 $day_names = [
     'lunedi' => 'Lunedì',
@@ -146,7 +178,11 @@ $day_names = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="../styles/home.css">
+    <!-- Add cache-busting meta tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="../styles/home.css?v=<?php echo time(); ?>">
     <title>Disponibilità</title>
     <style>
         .availability-section {
@@ -289,6 +325,20 @@ $day_names = [
             font-size: 0.9em;
             margin-top: 5px;
         }
+        /* Add debug panel styles */
+        .debug-panel {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -299,7 +349,7 @@ $day_names = [
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
                 <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                <li><a href="disponibilita.php">Disponibilità</a></li>
+                <li><a href="disponibilita.php?refresh=<?php echo time(); ?>">Disponibilità</a></li>
                 <?php if($has_google_calendar): ?>
                     <li><a href="google_calendar_setup.php">Google Calendar</a></li>
                 <?php endif; ?>
@@ -312,6 +362,15 @@ $day_names = [
         <section>
             <h1>La tua disponibilità</h1>
             <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
+            
+            <!-- Debug Panel for Teacher -->
+            <div class="debug-panel">
+                <h3>Informazioni diagnostiche</h3>
+                <p>Slot disponibilità trovati: <?php echo $total_slots; ?></p>
+                <p>Lezioni disponibili trovate: <?php echo $total_lessons; ?></p>
+                <p>Ultimo aggiornamento: <?php echo date('Y-m-d H:i:s'); ?></p>
+                <p>Email: <?php echo $email; ?></p>
+            </div>
             
             <div class="availability-section">
                 <?php if($has_google_calendar): ?>
@@ -393,13 +452,17 @@ $day_names = [
         const dayNames = <?php echo json_encode($day_names); ?>;
         const maxWeeks = <?php echo count($availability_by_week); ?>;
         
+        // Log data for debugging
+        console.log("Available weeks:", maxWeeks);
+        console.log("Availability data:", availabilityData);
+        
         // Inizializza la pagina
         document.addEventListener('DOMContentLoaded', function() {
             renderWeek(currentWeek);
             renderPaginationControls();
         });
         
-        // Sincronizzazione Google Calendar
+        // Sincronizzazione Google Calendar - update to use direct API path
         function syncGoogleCalendar() {
             const syncBtn = document.getElementById('syncBtn');
             const syncBtnEmpty = document.getElementById('syncBtnEmpty');
@@ -423,17 +486,18 @@ $day_names = [
                 syncStatus.textContent = 'Sincronizzazione in corso...';
             }
             
-            // Chiamata API per la sincronizzazione
-            fetch('../api/sync_google_calendar.php')
+            // Use direct path to API
+            fetch('../api/sync_google_calendar.php?nocache=' + new Date().getTime())
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         if (syncStatus) {
-                            syncStatus.textContent = 'Sincronizzazione completata!';
+                            syncStatus.textContent = 'Sincronizzazione completata! Aggiornamento pagina...';
                         }
+                        // Force a hard refresh after successful sync
                         setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
+                            window.location.href = window.location.pathname + '?refresh=' + new Date().getTime();
+                        }, 1500);
                     } else {
                         if (syncStatus) {
                             syncStatus.textContent = 'Errore: ' + data.message;
