@@ -88,8 +88,8 @@ try {
     // Analizza gli eventi iCal
     $events = parse_ical_events($ical_content);
     
-    // Ottieni le date delle prossime 4 settimane invece di 2
-    $dates = get_next_weeks_dates(4);
+    // Ottieni le date delle prossime 3 settimane
+    $dates = get_next_weeks_dates(3);
     
     // Genera disponibilità in base alle date e agli eventi
     $availability = generate_availability($dates, $events, $data);
@@ -237,11 +237,12 @@ function parse_ical_date($date_string) {
 // Funzione per generare le date delle prossime settimane
 function get_next_weeks_dates($weeks) {
     $dates = [];
-    $now = new DateTime();
+    $today = new DateTime('today');
     
-    for ($i = 0; $i < $weeks * 7; $i++) {
-        $date = clone $now;
-        $date->modify("+$i days");
+    // Genera date per esattamente il numero di settimane specificato
+    for ($day = 0; $day < ($weeks * 7); $day++) {
+        $date = clone $today;
+        $date->modify("+$day days");
         $dates[] = $date;
     }
     
