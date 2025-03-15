@@ -17,8 +17,40 @@ function debug_log($message) {
     echo "<!-- DEBUG: $message -->\n";
 }
 
-// Ottieni le disponibilità del professore con query migliorata
+// CRITICAL FIX: Get availability by joining both tables to see complete picture
 $email = $_SESSION['email'];
+
+// First, get scheduled lessons from Lezioni table
+$lessons_query = "SELECT 
+                    DATE_FORMAT(start_time, '%Y-%m-%d') as data,
+                    DATE_FORMAT(start_time, '%d/%m/%Y') as data_formattata,
+                    DATE_FORMAT(start_time, '%H:%i') as ora_inizio,
+                    DATE_FORMAT(end_time, '%H:%i') as ora_fine,
+                    CASE
+                        WHEN DAYOFWEEK(start_time) = 2 THEN 'lunedi'
+                        WHEN DAYOFWEEK(start_time) = 3 THEN 'martedi'
+                        WHEN DAYOFWEEK(start_time) = 4 THEN 'mercoledi'
+                        WHEN DAYOFWEEK(start_time) = 5 THEN 'giovedi'
+                        WHEN DAYOFWEEK(start_time) = 6 THEN 'venerdi'
+                        WHEN DAYOFWEEK(start_time) = 7 THEN 'sabato'
+                        WHEN DAYOFWEEK(start_time) = 1 THEN 'domenica'
+                    END as giorno_settimana,
+                    stato,
+                    id as lezione_id
+                FROM Lezioni
+                WHERE teacher_email = ? AND stato = 'disponibile'
+                ORDER BY start_time";
+                
+$lessons_stmt = $conn->prepare($lessons_query);
+$lessons_stmt->bind_param("s", $email);
+$lessons_stmt->execute();
+$lessons_result = $lessons_stmt->get_result();
+
+// Count lessons for debugging
+$total_lessons = $lessons_result->num_rows;
+debug_log("Lezioni disponibili trovate: $total_lessons");
+
+// Get availability patterns from Disponibilita table
 $query = "SELECT d.id, d.giorno_settimana, d.ora_inizio, d.ora_fine 
           FROM Disponibilita d 
           WHERE d.teacher_email = ? 
@@ -28,21 +60,11 @@ $query = "SELECT d.id, d.giorno_settimana, d.ora_inizio, d.ora_fine
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
-$result = $stmt->get_result();
+$disp_result = $stmt->get_result();
 
 // Count available slots for debugging
-$total_slots = $result->num_rows;
-debug_log("Totale slot disponibilità trovati: $total_slots");
-
-// Get lesson counts too
-$lessons_query = "SELECT COUNT(*) as count FROM Lezioni WHERE teacher_email = ? AND stato = 'disponibile'";
-$lessons_stmt = $conn->prepare($lessons_query);
-$lessons_stmt->bind_param("s", $email);
-$lessons_stmt->execute();
-$lessons_result = $lessons_stmt->get_result();
-$lessons_row = $lessons_result->fetch_assoc();
-$total_lessons = $lessons_row['count'];
-debug_log("Totale lezioni disponibili trovate: $total_lessons");
+$total_slots = $disp_result->num_rows;
+debug_log("Pattern di disponibilità trovati: $total_slots");
 
 // Recupera il link di calendario Google
 $query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
@@ -53,112 +75,85 @@ $calendar_result = $stmt->get_result();
 $calendar_row = $calendar_result->fetch_assoc();
 $has_google_calendar = !empty($calendar_row['google_calendar_link']);
 
-// Funzione per ottenere la prossima data per un giorno della settimana
-function get_next_date_for_weekday($weekday) {
-    $weekdays = [
-        'lunedi' => 1,
-        'martedi' => 2,
-        'mercoledi' => 3,
-        'giovedi' => 4,
-        'venerdi' => 5,
-        'sabato' => 6,
-        'domenica' => 7
-    ];
-    
-    $today = new DateTime();
-    $target_day_num = $weekdays[$weekday];
-    $current_day_num = (int)$today->format('N'); // 1 (Monday) to 7 (Sunday)
-    
-    // Calculate days to add
-    if ($target_day_num >= $current_day_num) {
-        // The next occurrence is this week
-        $days_to_add = $target_day_num - $current_day_num;
-    } else {
-        // The next occurrence is next week
-        $days_to_add = 7 - ($current_day_num - $target_day_num);
+// Get lessons into a more usable format organized by date
+$lessons_by_date = [];
+while ($row = $lessons_result->fetch_assoc()) {
+    $date_str = $row['data'];
+    if (!isset($lessons_by_date[$date_str])) {
+        $lessons_by_date[$date_str] = [];
     }
-    
-    // Create a new DateTime for the calculated date
-    $next_date = clone $today;
-    $next_date->modify("+$days_to_add days");
-    
-    return $next_date;
+    $lessons_by_date[$date_str][] = $row;
+    debug_log("Lezione trovata: {$row['giorno_settimana']} {$row['data']} {$row['ora_inizio']}-{$row['ora_fine']}");
 }
 
-// Funzione per ottenere date del giorno specifico per le prossime 3 settimane
-function get_dates_for_weekday_next_weeks($weekday, $weeks = 3) {
-    $weekdays = [
-        'lunedi' => 1,
-        'martedi' => 2,
-        'mercoledi' => 3,
-        'giovedi' => 4,
-        'venerdi' => 5,
-        'sabato' => 6,
-        'domenica' => 7
-    ];
-    
-    $today = new DateTime();
-    $target_day_num = $weekdays[$weekday];
-    $current_day_num = (int)$today->format('N');
-    
-    $dates = [];
-    
-    // Calcola la prima occorrenza
-    if ($target_day_num >= $current_day_num) {
-        $days_to_add = $target_day_num - $current_day_num;
-    } else {
-        $days_to_add = 7 - ($current_day_num - $target_day_num);
-    }
-    
-    // Aggiungi tutte le date per il numero di settimane richiesto
-    for ($i = 0; $i < $weeks; $i++) {
-        $date = clone $today;
-        $date->modify("+" . ($days_to_add + ($i * 7)) . " days");
-        $dates[] = $date;
-    }
-    
-    return $dates;
-}
-
-// Organizza le disponibilità per settimana e giorno
+// Organize lessons by week and day
 $availability_by_week = [];
-$days_of_week = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
+$now = new DateTime();
+$weeks_to_show = 3;
 
-// Get today's day number (1 = Monday, 7 = Sunday)
-$today_day_num = (int)(new DateTime())->format('N');
-$today = new DateTime();
-
-// Track days with data
-$days_with_data = [];
-
-while ($row = $result->fetch_assoc()) {
-    $day = $row['giorno_settimana'];
-    $days_with_data[$day] = true;
+// Process each lesson and organize by week
+foreach ($lessons_by_date as $date_str => $slots) {
+    $lesson_date = new DateTime($date_str);
+    $diff = $now->diff($lesson_date);
+    $days_diff = $diff->days;
     
-    // Get dates for this weekday for the next 3 weeks
-    $dates = get_dates_for_weekday_next_weeks($day);
+    // Skip if in the past
+    if ($diff->invert) {
+        continue;
+    }
     
-    // Add each occurrence to the appropriate week
-    foreach ($dates as $index => $date) {
-        $week_number = $index;
-        $row_copy = $row;
-        $row_copy['data'] = $date->format('Y-m-d');
-        $row_copy['data_formattata'] = $date->format('d/m/Y');
-        
-        if (!isset($availability_by_week[$week_number])) {
-            $availability_by_week[$week_number] = [];
-        }
-        
-        if (!isset($availability_by_week[$week_number][$day])) {
-            $availability_by_week[$week_number][$day] = [];
-        }
-        
-        $availability_by_week[$week_number][$day][] = $row_copy;
+    // Calculate which week this belongs to (0 = current week, 1 = next week, etc.)
+    $week_number = floor($days_diff / 7);
+    
+    // Only show up to 3 weeks ahead
+    if ($week_number >= $weeks_to_show) {
+        continue;
+    }
+    
+    // Get the day of week
+    $day_name = '';
+    switch ($lesson_date->format('N')) {
+        case 1: $day_name = 'lunedi'; break;
+        case 2: $day_name = 'martedi'; break;
+        case 3: $day_name = 'mercoledi'; break;
+        case 4: $day_name = 'giovedi'; break;
+        case 5: $day_name = 'venerdi'; break;
+        case 6: $day_name = 'sabato'; break;
+        case 7: $day_name = 'domenica'; break;
+    }
+    
+    // Initialize the week structure if needed
+    if (!isset($availability_by_week[$week_number])) {
+        $availability_by_week[$week_number] = [];
+    }
+    
+    // Initialize the day structure if needed
+    if (!isset($availability_by_week[$week_number][$day_name])) {
+        $availability_by_week[$week_number][$day_name] = [];
+    }
+    
+    // Add all slots for this day
+    foreach ($slots as $slot) {
+        $availability_by_week[$week_number][$day_name][] = $slot;
     }
 }
 
 // Debug the availability data structure
-debug_log("Giorni con dati: " . implode(", ", array_keys($days_with_data)));
+$days_with_data = [];
+foreach ($availability_by_week as $week => $days) {
+    foreach ($days as $day => $slots) {
+        if (!empty($slots)) {
+            if (!isset($days_with_data[$day])) {
+                $days_with_data[$day] = [];
+            }
+            $days_with_data[$day][] = $week;
+        }
+    }
+}
+
+foreach ($days_with_data as $day => $weeks) {
+    debug_log("Giorno $day presente nelle settimane: " . implode(", ", $weeks));
+}
 debug_log("Settimane con dati: " . count($availability_by_week));
 
 // Translate day names
@@ -363,13 +358,14 @@ $day_names = [
             <h1>La tua disponibilità</h1>
             <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
             
-            <!-- Debug Panel for Teacher -->
+            <!-- Debug Panel for Teacher - with enhanced information -->
             <div class="debug-panel">
                 <h3>Informazioni diagnostiche</h3>
-                <p>Slot disponibilità trovati: <?php echo $total_slots; ?></p>
-                <p>Lezioni disponibili trovate: <?php echo $total_lessons; ?></p>
+                <p>Pattern di disponibilità: <?php echo $total_slots; ?></p>
+                <p>Lezioni disponibili: <?php echo $total_lessons; ?></p>
                 <p>Ultimo aggiornamento: <?php echo date('Y-m-d H:i:s'); ?></p>
                 <p>Email: <?php echo $email; ?></p>
+                <p>Settimane generate: <?php echo count($availability_by_week); ?></p>
             </div>
             
             <div class="availability-section">
@@ -594,14 +590,16 @@ $day_names = [
             // Find first and last date in this week's data
             for (const day in weekData) {
                 if (weekData[day].length > 0) {
-                    const date = new Date(weekData[day][0].data);
-                    if (!weekStart || date < weekStart) {
-                        weekStart = date;
+                    for (const slot of weekData[day]) {
+                        const date = new Date(slot.data);
+                        if (!weekStart || date < weekStart) {
+                            weekStart = date;
+                        }
+                        if (!weekEnd || date > weekEnd) {
+                            weekEnd = date;
+                        }
+                        foundDates = true;
                     }
-                    if (!weekEnd || date > weekEnd) {
-                        weekEnd = date;
-                    }
-                    foundDates = true;
                 }
             }
             
@@ -653,6 +651,9 @@ $day_names = [
             for (const day of orderedDays) {
                 const slots = weekData[day] || [];
                 if (slots.length === 0) continue;
+                
+                // Sort slots by time
+                slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
                 
                 html += `
                     <div class="day-card">
