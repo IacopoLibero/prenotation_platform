@@ -6,6 +6,7 @@ error_reporting(E_ALL); // But still report all types of errors
 // Start output buffering to prevent any output before headers
 ob_start();
 
+
 // For catching fatal errors that would otherwise produce blank page
 register_shutdown_function(function() {
     $error = error_get_last();
