@@ -392,60 +392,77 @@ function is_slot_occupied($date, $slot, $events) {
     error_log("Verifica slot per $date_str (giorno $day_of_week, $day_name): " . 
               $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
     
-    // Debug: Conta quanti eventi stiamo controllando
-    $events_count = count($events);
-    error_log("Controllo contro $events_count eventi totali");
-    $checked_for_day = 0;
+    // Importante: Nessun evento deve corrispondere a questo specifico giorno (non solo eventi specifici della settimana)
+    $events_for_day = 0;
+    $checked_events = 0;
     
     foreach ($events as $index => $event) {
-        // Verifica se l'evento è nello stesso giorno dello slot
-        $event_start_date = $event['start']->format('Y-m-d');
-        $event_end_date = $event['end']->format('Y-m-d');
+        $checked_events++;
         
-        // Solo controlla eventi nel giorno corrente o multi-giorno che includono questo giorno
-        if ($event_start_date == $date_str || $event_end_date == $date_str || 
-            ($event_start_date < $date_str && $event_end_date > $date_str)) {
-            
-            $checked_for_day++;
-            
-            // Debug
-            error_log("[$day_name] Controllo evento #$index (" . ($event['summary'] ?? 'Senza titolo') . "): " . 
-                      $event['start']->format('Y-m-d H:i:s') . " - " . 
-                      $event['end']->format('Y-m-d H:i:s'));
+        // Verifica se l'evento è in questo giorno specifico
+        if (isEventOnDate($event, $date_str)) {
+            $events_for_day++;
             
             // Conversione di date per garantire confronto corretto
             $event_start = clone $event['start'];
             $event_end = clone $event['end'];
             
-            // Se l'evento inizia prima del giorno corrente, imposta l'inizio alle 00:00 del giorno corrente
-            if ($event_start_date < $date_str) {
-                $event_start = new DateTime($date_str . ' 00:00:00');
-                error_log("[$day_name] Evento iniziato in un giorno precedente, aggiustato a: " . $event_start->format('Y-m-d H:i:s'));
-            }
+            // Normalizza l'orario dell'evento al giorno corrente se l'evento si estende su più giorni
+            normalizeEventTimeToDay($event_start, $event_end, $date_str);
             
-            // Se l'evento finisce dopo il giorno corrente, imposta la fine alle 23:59 del giorno corrente
-            if ($event_end_date > $date_str) {
-                $event_end = new DateTime($date_str . ' 23:59:59');
-                error_log("[$day_name] Evento finisce in un giorno successivo, aggiustato a: " . $event_end->format('Y-m-d H:i:s'));
-            }
+            // Debug avanzato - log dettagliato per questo evento
+            error_log("[$date_str] Controllo evento #$index: " . ($event['summary'] ?? 'Senza titolo') . 
+                     " normalizzato a: " . $event_start->format('H:i') . "-" . $event_end->format('H:i') . 
+                     " vs slot: " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i'));
             
-            // Controlla sovrapposizione: l'evento si sovrappone allo slot se
-            // l'inizio dell'evento è prima o uguale alla fine dello slot E
-            // la fine dell'evento è dopo o uguale all'inizio dello slot
+            // Controlla sovrapposizione con inclusione degli orari limite
             if (($event_start <= $slot_end) && ($event_end >= $slot_start)) {
-                error_log("OCCUPATO [$day_name]: Sovrapposizione trovata con " . ($event['summary'] ?? 'Senza titolo') . 
-                          " [" . $event_start->format('H:i') . "-" . $event_end->format('H:i') . "]");
+                error_log("OCCUPATO: [$date_str] Slot " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i') . 
+                         " è occupato da evento " . ($event['summary'] ?? 'Senza titolo'));
                 return true;
-            } else {
-                error_log("[$day_name] Nessuna sovrapposizione: " . 
-                          "Evento: " . $event_start->format('H:i') . "-" . $event_end->format('H:i') . " vs " . 
-                          "Slot: " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i'));
             }
         }
     }
     
-    error_log("LIBERO [$day_name]: Lo slot è disponibile (controllati $checked_for_day eventi per questo giorno)");
+    error_log("LIBERO: [$date_str] Slot " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i') . 
+              " è disponibile (controllati $events_for_day eventi per questo giorno su $checked_events totali)");
     return false;
+}
+
+/**
+ * Controlla se un evento si verifica in una data specifica
+ */
+function isEventOnDate($event, $date_str) {
+    $event_start_date = $event['start']->format('Y-m-d');
+    $event_end_date = $event['end']->format('Y-m-d');
+    
+    // L'evento è in questo giorno se:
+    // 1. Inizia in questo giorno, o
+    // 2. Finisce in questo giorno, o
+    // 3. Inizia prima e finisce dopo questo giorno (evento multi-giorno)
+    return ($event_start_date == $date_str || 
+            $event_end_date == $date_str || 
+            ($event_start_date < $date_str && $event_end_date > $date_str));
+}
+
+/**
+ * Normalizza gli orari di inizio e fine di un evento al giorno specificato
+ */
+function normalizeEventTimeToDay(&$event_start, &$event_end, $date_str) {
+    $event_start_date = $event_start->format('Y-m-d');
+    $event_end_date = $event_end->format('Y-m-d');
+    
+    // Se l'evento inizia prima del giorno corrente, imposta l'inizio alle 00:00 del giorno corrente
+    if ($event_start_date < $date_str) {
+        $event_start = new DateTime($date_str . ' 00:00:00');
+        error_log("Evento inizia prima ($event_start_date), normalizzato a: " . $event_start->format('Y-m-d H:i:s'));
+    }
+    
+    // Se l'evento finisce dopo il giorno corrente, imposta la fine alle 23:59 del giorno corrente
+    if ($event_end_date > $date_str) {
+        $event_end = new DateTime($date_str . ' 23:59:59');
+        error_log("Evento finisce dopo ($event_end_date), normalizzato a: " . $event_end->format('Y-m-d H:i:s'));
+    }
 }
 
 // Funzione per salvare le disponibilità nel database
