@@ -61,35 +61,84 @@ function get_next_date_for_weekday($weekday) {
     return $next_date;
 }
 
-// Organizza le disponibilità per giorno della settimana
-$availability_by_day = [];
+// Funzione per ottenere date del giorno specifico per le prossime 3 settimane
+function get_dates_for_weekday_next_weeks($weekday, $weeks = 3) {
+    $weekdays = [
+        'lunedi' => 1,
+        'martedi' => 2,
+        'mercoledi' => 3,
+        'giovedi' => 4,
+        'venerdi' => 5,
+        'sabato' => 6,
+        'domenica' => 7
+    ];
+    
+    $today = new DateTime();
+    $target_day_num = $weekdays[$weekday];
+    $current_day_num = (int)$today->format('N');
+    
+    $dates = [];
+    
+    // Calcola la prima occorrenza
+    if ($target_day_num >= $current_day_num) {
+        $days_to_add = $target_day_num - $current_day_num;
+    } else {
+        $days_to_add = 7 - ($current_day_num - $target_day_num);
+    }
+    
+    // Aggiungi tutte le date per il numero di settimane richiesto
+    for ($i = 0; $i < $weeks; $i++) {
+        $date = clone $today;
+        $date->modify("+" . ($days_to_add + ($i * 7)) . " days");
+        $dates[] = $date;
+    }
+    
+    return $dates;
+}
+
+// Organizza le disponibilità per settimana e giorno
+$availability_by_week = [];
 $days_of_week = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
 
 // Get today's day number (1 = Monday, 7 = Sunday)
 $today_day_num = (int)(new DateTime())->format('N');
-
-// Reorder days to start from tomorrow
-$reordered_days = [];
-for ($i = 0; $i < 7; $i++) {
-    $day_index = ($today_day_num + $i) % 7; // Wrap around after 7
-    if ($day_index == 0) $day_index = 7; // Convert 0 to 7 for Sunday
-    $reordered_days[] = $days_of_week[$day_index - 1];
-}
-
-// Initialize empty arrays for each day
-foreach ($days_of_week as $day) {
-    $availability_by_day[$day] = [];
-}
+$today = new DateTime();
 
 while ($row = $result->fetch_assoc()) {
     $day = $row['giorno_settimana'];
-    // Calculate date for this weekday
-    $next_date = get_next_date_for_weekday($day);
-    $row['data'] = $next_date->format('Y-m-d');
-    $row['data_formattata'] = $next_date->format('d/m/Y');
     
-    $availability_by_day[$day][] = $row;
+    // Get dates for this weekday for the next 3 weeks
+    $dates = get_dates_for_weekday_next_weeks($day);
+    
+    // Add each occurrence to the appropriate week
+    foreach ($dates as $index => $date) {
+        $week_number = $index;
+        $row_copy = $row;
+        $row_copy['data'] = $date->format('Y-m-d');
+        $row_copy['data_formattata'] = $date->format('d/m/Y');
+        
+        if (!isset($availability_by_week[$week_number])) {
+            $availability_by_week[$week_number] = [];
+        }
+        
+        if (!isset($availability_by_week[$week_number][$day])) {
+            $availability_by_week[$week_number][$day] = [];
+        }
+        
+        $availability_by_week[$week_number][$day][] = $row_copy;
+    }
 }
+
+// Translate day names
+$day_names = [
+    'lunedi' => 'Lunedì',
+    'martedi' => 'Martedì',
+    'mercoledi' => 'Mercoledì',
+    'giovedi' => 'Giovedì',
+    'venerdi' => 'Venerdì',
+    'sabato' => 'Sabato',
+    'domenica' => 'Domenica'
+];
 ?>
 
 <!DOCTYPE html>
@@ -203,6 +252,43 @@ while ($row = $result->fetch_assoc()) {
             margin-top: 25px;
             text-align: center;
         }
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+        .pagination-btn {
+            background-color: #2da0a8;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pagination-btn:hover {
+            background-color: #218a92;
+        }
+        .pagination-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .page-indicator {
+            font-weight: 500;
+            color: #333;
+        }
+        .week-header {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #333;
+        }
+        .week-dates {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -253,10 +339,12 @@ while ($row = $result->fetch_assoc()) {
                 
                 <?php 
                 $has_any_availability = false;
-                foreach($availability_by_day as $day => $slots) {
-                    if (!empty($slots)) {
-                        $has_any_availability = true;
-                        break;
+                foreach($availability_by_week as $week_data) {
+                    foreach($week_data as $day => $slots) {
+                        if (!empty($slots)) {
+                            $has_any_availability = true;
+                            break 2;
+                        }
                     }
                 }
                 
@@ -281,44 +369,13 @@ while ($row = $result->fetch_assoc()) {
                         <?php endif; ?>
                     </div>
                 <?php else: ?>
-                    <div class="availability-container">
-                        <?php 
-                        $day_names = [
-                            'lunedi' => 'Lunedì',
-                            'martedi' => 'Martedì',
-                            'mercoledi' => 'Mercoledì',
-                            'giovedi' => 'Giovedì',
-                            'venerdi' => 'Venerdì',
-                            'sabato' => 'Sabato',
-                            'domenica' => 'Domenica'
-                        ];
-                        
-                        // Use the reordered days array
-                        foreach($reordered_days as $day): 
-                            // Skip today as we want to show from tomorrow forward
-                            if ($day == $days_of_week[$today_day_num - 1]) continue;
-                            
-                            $slots = $availability_by_day[$day];
-                            if (empty($slots)) continue; // Skip days with no slots
-                        ?>
-                            <div class="day-card">
-                                <h3 class="day-header">
-                                    <?= $day_names[$day] ?>
-                                    <?php if(!empty($slots)): ?>
-                                        <span class="date-badge"><?= $slots[0]['data_formattata'] ?></span>
-                                    <?php endif; ?>
-                                </h3>
-                                <?php if(!empty($slots)): ?>
-                                    <?php foreach($slots as $slot): ?>
-                                        <div class="time-slot">
-                                            <span class="time-range"><?= $slot['ora_inizio'] ?> - <?= $slot['ora_fine'] ?></span>
-                                        </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="empty-day">Nessuna disponibilità</div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
+                    <!-- Week navigation controls -->
+                    <div id="paginationControls" class="pagination-controls">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    
+                    <div id="weekContainer">
+                        <!-- Week content will be displayed here -->
                     </div>
                 <?php endif; ?>
             </div>
@@ -330,6 +387,18 @@ while ($row = $result->fetch_assoc()) {
     </footer>
     
     <script>
+        // Variabili globali
+        let currentWeek = 0;
+        const availabilityData = <?php echo json_encode($availability_by_week); ?>;
+        const dayNames = <?php echo json_encode($day_names); ?>;
+        const maxWeeks = <?php echo count($availability_by_week); ?>;
+        
+        // Inizializza la pagina
+        document.addEventListener('DOMContentLoaded', function() {
+            renderWeek(currentWeek);
+            renderPaginationControls();
+        });
+        
         // Sincronizzazione Google Calendar
         function syncGoogleCalendar() {
             const syncBtn = document.getElementById('syncBtn');
@@ -406,6 +475,142 @@ while ($row = $result->fetch_assoc()) {
         const syncBtnEmpty = document.getElementById('syncBtnEmpty');
         if (syncBtnEmpty) {
             syncBtnEmpty.addEventListener('click', syncGoogleCalendar);
+        }
+        
+        // Funzione per renderizzare i controlli di paginazione
+        function renderPaginationControls() {
+            const paginationContainer = document.getElementById('paginationControls');
+            if (!paginationContainer) return;
+            
+            const weekNames = {
+                0: 'Questa settimana',
+                1: 'Prossima settimana',
+                2: 'Tra due settimane',
+                3: 'Tra tre settimane'
+            };
+            
+            paginationContainer.innerHTML = `
+                <button 
+                    class="pagination-btn" 
+                    onclick="changeWeek(${currentWeek - 1})"
+                    ${currentWeek <= 0 ? 'disabled' : ''}>
+                    &laquo; Settimana precedente
+                </button>
+                <span class="page-indicator">${weekNames[currentWeek] || `Settimana ${currentWeek + 1}`}</span>
+                <button 
+                    class="pagination-btn" 
+                    onclick="changeWeek(${currentWeek + 1})"
+                    ${currentWeek >= maxWeeks - 1 ? 'disabled' : ''}>
+                    Settimana successiva &raquo;
+                </button>
+            `;
+        }
+        
+        // Funzione per cambiare settimana
+        function changeWeek(newWeek) {
+            if (newWeek >= 0 && newWeek < maxWeeks) {
+                currentWeek = newWeek;
+                renderWeek(currentWeek);
+                renderPaginationControls();
+                window.scrollTo(0, 0); // Scroll to top
+            }
+        }
+        
+        // Funzione per renderizzare la settimana corrente
+        function renderWeek(weekNumber) {
+            const container = document.getElementById('weekContainer');
+            if (!container) return;
+            
+            const weekData = availabilityData[weekNumber] || {};
+            
+            // Get the date range for this week
+            let weekStart, weekEnd;
+            let foundDates = false;
+            
+            // Find first and last date in this week's data
+            for (const day in weekData) {
+                if (weekData[day].length > 0) {
+                    const date = new Date(weekData[day][0].data);
+                    if (!weekStart || date < weekStart) {
+                        weekStart = date;
+                    }
+                    if (!weekEnd || date > weekEnd) {
+                        weekEnd = date;
+                    }
+                    foundDates = true;
+                }
+            }
+            
+            // Default dates if no slots found
+            if (!foundDates) {
+                const today = new Date();
+                weekStart = new Date();
+                weekStart.setDate(today.getDate() + (weekNumber * 7));
+                weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+            }
+            
+            const weekDateRange = `${weekStart.toLocaleDateString('it-IT')} - ${weekEnd.toLocaleDateString('it-IT')}`;
+            
+            // Check if there are any slots for this week
+            let hasSlots = false;
+            for (const day in weekData) {
+                if (weekData[day].length > 0) {
+                    hasSlots = true;
+                    break;
+                }
+            }
+            
+            if (!hasSlots) {
+                container.innerHTML = `
+                    <div class="week-header">
+                        ${weekNumber === 0 ? 'Settimana corrente' : weekNumber === 1 ? 'Prossima settimana' : 'Settimana ' + (weekNumber + 1)}
+                        <div class="week-dates">${weekDateRange}</div>
+                    </div>
+                    <div class="no-availability">
+                        <p>Nessuna disponibilità per questa settimana.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Build HTML for availability
+            let html = `
+                <div class="week-header">
+                    ${weekNumber === 0 ? 'Settimana corrente' : weekNumber === 1 ? 'Prossima settimana' : 'Settimana ' + (weekNumber + 1)}
+                    <div class="week-dates">${weekDateRange}</div>
+                </div>
+                <div class="availability-container">
+            `;
+            
+            // Order days correctly (Monday to Sunday)
+            const orderedDays = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
+            
+            for (const day of orderedDays) {
+                const slots = weekData[day] || [];
+                if (slots.length === 0) continue;
+                
+                html += `
+                    <div class="day-card">
+                        <h3 class="day-header">
+                            ${dayNames[day]}
+                            <span class="date-badge">${slots[0].data_formattata}</span>
+                        </h3>
+                `;
+                
+                slots.forEach(slot => {
+                    html += `
+                        <div class="time-slot">
+                            <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            }
+            
+            html += `</div>`;
+            container.innerHTML = html;
         }
     </script>
 </body>
