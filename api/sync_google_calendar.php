@@ -250,6 +250,59 @@ function get_next_weeks_dates($weeks) {
     return $dates;
 }
 
+// Add this debug function to analyze events specifically for a given date
+function debug_events_for_date($date_str, $events) {
+    error_log("========== DEBUG EVENTI PER $date_str ==========");
+    $found = 0;
+    
+    foreach ($events as $index => $event) {
+        $event_start_date = $event['start']->format('Y-m-d');
+        $event_end_date = $event['end']->format('Y-m-d');
+        $event_summary = $event['summary'] ?? 'Senza titolo';
+        
+        // Check all possible ways this event could affect this date
+        if ($event_start_date === $date_str || 
+            $event_end_date === $date_str || 
+            ($event_start_date < $date_str && $event_end_date > $date_str)) {
+            
+            $found++;
+            error_log("EVENTO #$index: '$event_summary'");
+            error_log(" - Start: " . $event['start']->format('Y-m-d H:i:s'));
+            error_log(" - End: " . $event['end']->format('Y-m-d H:i:s'));
+            
+            // Check if this is a multi-day event
+            if ($event_start_date !== $event_end_date) {
+                error_log(" - MULTI-GIORNO: Inizia $event_start_date, Finisce $event_end_date");
+            }
+            
+            // Calculate effective times for this day
+            $effective_start = clone $event['start'];
+            $effective_end = clone $event['end'];
+            
+            if ($event_start_date < $date_str) {
+                $effective_start = new DateTime($date_str . ' 00:00:00');
+                error_log(" - Orario inizio effettivo: " . $effective_start->format('H:i'));
+            }
+            
+            if ($event_end_date > $date_str) {
+                $effective_end = new DateTime($date_str . ' 23:59:59');
+                error_log(" - Orario fine effettivo: " . $effective_end->format('H:i'));
+            }
+            
+            error_log(" - Blocca orari tra: " . $effective_start->format('H:i') . " - " . $effective_end->format('H:i'));
+        }
+    }
+    
+    if ($found === 0) {
+        error_log("NESSUN EVENTO TROVATO PER QUESTA DATA");
+    } else {
+        error_log("TOTALE EVENTI TROVATI PER QUESTA DATA: $found");
+    }
+    error_log("=================================================");
+    
+    return $found;
+}
+
 // Funzione per generare disponibilità in base alle date e agli eventi
 function generate_availability($dates, $events, $preferences) {
     $availability = [];
@@ -292,7 +345,11 @@ function generate_availability($dates, $events, $preferences) {
         }
         
         $date_str = $date->format('Y-m-d');
-        error_log("Elaborazione disponibilità per $date_str ($day_name)");
+        error_log("\n\n======== Elaborazione disponibilità per $date_str ($day_name) ========");
+        
+        // Run our diagnostic tool for this day
+        $events_count = debug_events_for_date($date_str, $events);
+        error_log("Trovati $events_count eventi rilevanti per $date_str");
         
         // MATTINA: Genera slot per orari mattutini
         if ($preferences['mattina'] && !empty($preferences['ora_inizio_mattina']) && !empty($preferences['ora_fine_mattina'])) {
