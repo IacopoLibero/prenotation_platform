@@ -409,20 +409,26 @@ function is_slot_occupied($date, $slot, $events) {
             // Se l'evento inizia prima del giorno corrente, imposta l'inizio alle 00:00 del giorno corrente
             if ($event_start_date < $date_str) {
                 $event_start = new DateTime($date_str . ' 00:00:00');
+                error_log("Evento iniziato in un giorno precedente, aggiustato a: " . $event_start->format('Y-m-d H:i:s'));
             }
             
             // Se l'evento finisce dopo il giorno corrente, imposta la fine alle 23:59 del giorno corrente
             if ($event_end_date > $date_str) {
                 $event_end = new DateTime($date_str . ' 23:59:59');
+                error_log("Evento finisce in un giorno successivo, aggiustato a: " . $event_end->format('Y-m-d H:i:s'));
             }
             
             // Controlla sovrapposizione: l'evento si sovrappone allo slot se
             // l'inizio dell'evento è prima della fine dello slot E
             // la fine dell'evento è dopo l'inizio dello slot
-            if (($event_start < $slot_end) && ($event_end > $slot_start)) {
+            if (($event_start <= $slot_end) && ($event_end >= $slot_start)) {
                 error_log("OCCUPATO: Sovrapposizione trovata con " . ($event['summary'] ?? 'Senza titolo') . 
-                          " [" . $event_start->format('H:i') . "-" . $event_end->format('H:i') . "]");
+                          " [" . $event_start->format('Y-m-d H:i:s') . "-" . $event_end->format('Y-m-d H:i:s') . "]");
                 return true;
+            } else {
+                error_log("Nessuna sovrapposizione: " . 
+                          "Evento: " . $event_start->format('H:i') . "-" . $event_end->format('H:i') . " vs " . 
+                          "Slot: " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i'));
             }
         }
     }
