@@ -6,6 +6,18 @@ error_reporting(E_ALL); // But still report all types of errors
 // Start output buffering to prevent any output before headers
 ob_start();
 
+// Define log file path in website root directory
+define('CALENDAR_LOG_FILE', dirname(dirname(__FILE__)) . '/calendar_sync_log.txt');
+
+// Create or clear the log file at the start of each sync
+file_put_contents(CALENDAR_LOG_FILE, "=== Calendar Sync Log - " . date('Y-m-d H:i:s') . " ===\n\n");
+
+// Custom log function that writes to our file
+function calendar_log($message) {
+    $timestamp = date('H:i:s');
+    $log_entry = "[$timestamp] $message\n";
+    file_put_contents(CALENDAR_LOG_FILE, $log_entry, FILE_APPEND);
+}
 
 // For catching fatal errors that would otherwise produce blank page
 register_shutdown_function(function() {
@@ -13,6 +25,9 @@ register_shutdown_function(function() {
     if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
         // Clean any output that might have been sent
         ob_end_clean();
+        
+        // Log the error
+        calendar_log("FATAL ERROR: {$error['message']} in {$error['file']} on line {$error['line']}");
         
         // Send proper JSON error response
         header('Content-Type: application/json');
@@ -25,6 +40,7 @@ register_shutdown_function(function() {
 });
 
 try {
+    calendar_log("Inizializzazione sincronizzazione calendario");
     session_start();
     require_once '../connessione.php';
     
@@ -34,6 +50,7 @@ try {
     }
     
     $teacher_email = $_SESSION['email'];
+    calendar_log("Utente: $teacher_email");
     
     // Recupero informazioni del calendario e preferenze
     $query = "SELECT p.google_calendar_link, pd.* 
@@ -97,6 +114,7 @@ try {
     
     // Prima elimina le vecchie disponibilità non ancora prenotate
     // Modifico la query per evitare l'errore di colonna sconosciuta
+    calendar_log("Eliminazione vecchie disponibilità");
     $delete_query = "DELETE FROM Disponibilita WHERE teacher_email = ?";
     $stmt = $conn->prepare($delete_query);
     $stmt->bind_param("s", $teacher_email);
@@ -123,6 +141,10 @@ try {
 } catch (Exception $e) {
     // Error response - ensure output buffer is clean before sending
     ob_end_clean();
+    
+    // Log the exception
+    calendar_log("EXCEPTION: {$e->getMessage()}");
+    
     header('Content-Type: application/json');
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
@@ -162,7 +184,7 @@ function parse_ical_events($ical_content) {
         // Solo se abbiamo sia inizio che fine validi
         if (!empty($event['start']) && !empty($event['end'])) {
             // Debug log per verificare la corretta interpretazione degli eventi
-            error_log("Evento #$index importato: " . 
+            calendar_log("Evento #$index importato: " . 
                       ($event['summary'] ?? 'Senza titolo') . " - " . 
                       $event['start']->format('Y-m-d H:i:s') . " - " . 
                       $event['end']->format('Y-m-d H:i:s'));
@@ -176,7 +198,7 @@ function parse_ical_events($ical_content) {
         return $a['start'] <=> $b['start'];
     });
     
-    error_log("Totale eventi importati: " . count($events) . " (ordinati cronologicamente)");
+    calendar_log("Totale eventi importati: " . count($events) . " (ordinati cronologicamente)");
     return $events;
 }
 
@@ -218,7 +240,7 @@ function parse_ical_date($date_string) {
                 $date->setTimezone(new DateTimeZone('Europe/Rome'));
                 
                 // Debug della conversione di timezone
-                error_log("Conversione UTC→Europe/Rome: $date_string → " . $date->format('Y-m-d H:i:s'));
+                calendar_log("Conversione UTC→Europe/Rome: $date_string → " . $date->format('Y-m-d H:i:s'));
             } 
             // Altrimenti è già nell'ora locale
             else {
@@ -231,7 +253,7 @@ function parse_ical_date($date_string) {
         }
     }
     
-    error_log("Formato data non riconosciuto: $date_string");
+    calendar_log("Formato data non riconosciuto: $date_string");
     return null;
 }
 
@@ -252,7 +274,7 @@ function get_next_weeks_dates($weeks) {
 
 // Add this debug function to analyze events specifically for a given date
 function debug_events_for_date($date_str, $events) {
-    error_log("========== DEBUG EVENTI PER $date_str ==========");
+    calendar_log("========== DEBUG EVENTI PER $date_str ==========");
     $found = 0;
     
     foreach ($events as $index => $event) {
@@ -266,13 +288,13 @@ function debug_events_for_date($date_str, $events) {
             ($event_start_date < $date_str && $event_end_date > $date_str)) {
             
             $found++;
-            error_log("EVENTO #$index: '$event_summary'");
-            error_log(" - Start: " . $event['start']->format('Y-m-d H:i:s'));
-            error_log(" - End: " . $event['end']->format('Y-m-d H:i:s'));
+            calendar_log("EVENTO #$index: '$event_summary'");
+            calendar_log(" - Start: " . $event['start']->format('Y-m-d H:i:s'));
+            calendar_log(" - End: " . $event['end']->format('Y-m-d H:i:s'));
             
             // Check if this is a multi-day event
             if ($event_start_date !== $event_end_date) {
-                error_log(" - MULTI-GIORNO: Inizia $event_start_date, Finisce $event_end_date");
+                calendar_log(" - MULTI-GIORNO: Inizia $event_start_date, Finisce $event_end_date");
             }
             
             // Calculate effective times for this day
@@ -281,24 +303,24 @@ function debug_events_for_date($date_str, $events) {
             
             if ($event_start_date < $date_str) {
                 $effective_start = new DateTime($date_str . ' 00:00:00');
-                error_log(" - Orario inizio effettivo: " . $effective_start->format('H:i'));
+                calendar_log(" - Orario inizio effettivo: " . $effective_start->format('H:i'));
             }
             
             if ($event_end_date > $date_str) {
                 $effective_end = new DateTime($date_str . ' 23:59:59');
-                error_log(" - Orario fine effettivo: " . $effective_end->format('H:i'));
+                calendar_log(" - Orario fine effettivo: " . $effective_end->format('H:i'));
             }
             
-            error_log(" - Blocca orari tra: " . $effective_start->format('H:i') . " - " . $effective_end->format('H:i'));
+            calendar_log(" - Blocca orari tra: " . $effective_start->format('H:i') . " - " . $effective_end->format('H:i'));
         }
     }
     
     if ($found === 0) {
-        error_log("NESSUN EVENTO TROVATO PER QUESTA DATA");
+        calendar_log("NESSUN EVENTO TROVATO PER QUESTA DATA");
     } else {
-        error_log("TOTALE EVENTI TROVATI PER QUESTA DATA: $found");
+        calendar_log("TOTALE EVENTI TROVATI PER QUESTA DATA: $found");
     }
-    error_log("=================================================");
+    calendar_log("=================================================");
     
     return $found;
 }
@@ -311,7 +333,7 @@ function generate_availability($dates, $events, $preferences) {
     $slot_duration = 60;
     
     // Log delle preferenze per debug
-    error_log("Generazione disponibilità con preferenze: " . 
+    calendar_log("Generazione disponibilità con preferenze: " . 
               "mattina=" . ($preferences['mattina'] ? 'true' : 'false') . 
               " (" . $preferences['ora_inizio_mattina'] . "-" . $preferences['ora_fine_mattina'] . "), " .
               "pomeriggio=" . ($preferences['pomeriggio'] ? 'true' : 'false') . 
@@ -345,18 +367,18 @@ function generate_availability($dates, $events, $preferences) {
         }
         
         $date_str = $date->format('Y-m-d');
-        error_log("\n\n======== Elaborazione disponibilità per $date_str ($day_name) ========");
+        calendar_log("\n\n======== Elaborazione disponibilità per $date_str ($day_name) ========");
         
         // Run our diagnostic tool for this day
         $events_count = debug_events_for_date($date_str, $events);
-        error_log("Trovati $events_count eventi rilevanti per $date_str");
+        calendar_log("Trovati $events_count eventi rilevanti per $date_str");
         
         // MATTINA: Genera slot per orari mattutini
         if ($preferences['mattina'] && !empty($preferences['ora_inizio_mattina']) && !empty($preferences['ora_fine_mattina'])) {
             $morning_start_time = $preferences['ora_inizio_mattina'];
             $morning_end_time = $preferences['ora_fine_mattina'];
             
-            error_log("Generazione slot mattutini: $morning_start_time - $morning_end_time");
+            calendar_log("Generazione slot mattutini: $morning_start_time - $morning_end_time");
             
             // Converti stringhe orario in oggetti DateTime
             $morning_start = new DateTime($date_str . ' ' . $morning_start_time);
@@ -382,9 +404,9 @@ function generate_availability($dates, $events, $preferences) {
                 
                 if (!is_slot_occupied($date, $slot, $events)) {
                     $availability[] = $slot;
-                    error_log("Aggiunto slot mattutino: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                    calendar_log("Aggiunto slot mattutino: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 } else {
-                    error_log("Slot mattutino occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                    calendar_log("Slot mattutino occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 }
                 
                 $current = $slot_end;
@@ -396,7 +418,7 @@ function generate_availability($dates, $events, $preferences) {
             $afternoon_start_time = $preferences['ora_inizio_pomeriggio'];
             $afternoon_end_time = $preferences['ora_fine_pomeriggio'];
             
-            error_log("Generazione slot pomeridiani: $afternoon_start_time - $afternoon_end_time");
+            calendar_log("Generazione slot pomeridiani: $afternoon_start_time - $afternoon_end_time");
             
             // Converti stringhe orario in oggetti DateTime
             $afternoon_start = new DateTime($date_str . ' ' . $afternoon_start_time);
@@ -422,9 +444,9 @@ function generate_availability($dates, $events, $preferences) {
                 
                 if (!is_slot_occupied($date, $slot, $events)) {
                     $availability[] = $slot;
-                    error_log("Aggiunto slot pomeridiano: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                    calendar_log("Aggiunto slot pomeridiano: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 } else {
-                    error_log("Slot pomeridiano occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
+                    calendar_log("Slot pomeridiano occupato: {$slot['ora_inizio']} - {$slot['ora_fine']}");
                 }
                 
                 $current = $slot_end;
@@ -432,7 +454,7 @@ function generate_availability($dates, $events, $preferences) {
         }
     }
     
-    error_log("Generati " . count($availability) . " slot di disponibilità totali");
+    calendar_log("Generati " . count($availability) . " slot di disponibilità totali");
     return $availability;
 }
 
@@ -445,7 +467,7 @@ function is_slot_occupied($date, $slot, $events) {
     $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio'] . ':00');
     $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine'] . ':00');
     
-    error_log("🔍 VERIFICA SLOT: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']}");
+    calendar_log("🔍 VERIFICA SLOT: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']}");
     
     // Debug variables to track processing
     $total_events = count($events);
@@ -466,17 +488,17 @@ function is_slot_occupied($date, $slot, $events) {
         // Case 1: Event starts on this date
         if ($event_start_date === $date_str) {
             $event_happens_today = true;
-            error_log("  📅 [$day_name] Evento '$event_summary' INIZIA oggi ($date_str)");
+            calendar_log("  📅 [$day_name] Evento '$event_summary' INIZIA oggi ($date_str)");
         }
         // Case 2: Event ends on this date
         elseif ($event_end_date === $date_str) {
             $event_happens_today = true;
-            error_log("  📅 [$day_name] Evento '$event_summary' FINISCE oggi ($date_str)");
+            calendar_log("  📅 [$day_name] Evento '$event_summary' FINISCE oggi ($date_str)");
         }
         // Case 3: Event spans over this date (starts before, ends after)
         elseif ($event_start_date < $date_str && $event_end_date > $date_str) {
             $event_happens_today = true;
-            error_log("  📅 [$day_name] Evento '$event_summary' ATTRAVERSA oggi ($date_str)");
+            calendar_log("  📅 [$day_name] Evento '$event_summary' ATTRAVERSA oggi ($date_str)");
         }
         
         if ($event_happens_today) {
@@ -490,34 +512,34 @@ function is_slot_occupied($date, $slot, $events) {
             if ($event_start_date < $date_str) {
                 // Event starts before today - set to start of today
                 $check_start = new DateTime($date_str . ' 00:00:00');
-                error_log("    ⏰ Evento inizia prima: aggiustato a " . $check_start->format('Y-m-d H:i:s'));
+                calendar_log("    ⏰ Evento inizia prima: aggiustato a " . $check_start->format('Y-m-d H:i:s'));
             }
             
             if ($event_end_date > $date_str) {
                 // Event ends after today - set to end of today
                 $check_end = new DateTime($date_str . ' 23:59:59');
-                error_log("    ⏰ Evento finisce dopo: aggiustato a " . $check_end->format('Y-m-d H:i:s'));
+                calendar_log("    ⏰ Evento finisce dopo: aggiustato a " . $check_end->format('Y-m-d H:i:s'));
             }
             
             // DEBUG: Show exact times being compared
-            error_log("    🕒 Confronto preciso:");
-            error_log("      - Slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
-            error_log("      - Evento: " . $check_start->format('Y-m-d H:i:s') . " - " . $check_end->format('Y-m-d H:i:s'));
+            calendar_log("    🕒 Confronto preciso:");
+            calendar_log("      - Slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
+            calendar_log("      - Evento: " . $check_start->format('Y-m-d H:i:s') . " - " . $check_end->format('Y-m-d H:i:s'));
             
             // Check for overlap with precise comparison
             // An event overlaps with the slot if:
             // 1. The event starts before or at the same time the slot ends AND
             // 2. The event ends after or at the same time the slot starts
             if (($check_start <= $slot_end) && ($check_end >= $slot_start)) {
-                error_log("    ❌ SOVRAPPOSIZIONE TROVATA: Slot bloccato da '$event_summary'");
+                calendar_log("    ❌ SOVRAPPOSIZIONE TROVATA: Slot bloccato da '$event_summary'");
                 return true; // Slot is occupied
             } else {
-                error_log("    ✅ Nessuna sovrapposizione");
+                calendar_log("    ✅ Nessuna sovrapposizione");
             }
         }
     }
     
-    error_log("🆓 SLOT LIBERO: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']} " .
+    calendar_log("🆓 SLOT LIBERO: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']} " .
               "(Controllati $events_on_this_day eventi su questo giorno)");
     
     return false; // Slot is free
@@ -526,12 +548,12 @@ function is_slot_occupied($date, $slot, $events) {
 // Funzione per salvare le disponibilità nel database
 function save_availability($conn, $teacher_email, $availability) {
     if (empty($availability)) {
-        error_log("Nessuna disponibilità da salvare per $teacher_email");
+        calendar_log("Nessuna disponibilità da salvare per $teacher_email");
         return true; // Nessuna disponibilità da salvare
     }
     
     $success = true;
-    error_log("Salvataggio di " . count($availability) . " disponibilità per $teacher_email");
+    calendar_log("Salvataggio di " . count($availability) . " disponibilità per $teacher_email");
     
     // Modifica la query per usare REPLACE INTO invece di INSERT
     // REPLACE INTO cancellerà automaticamente eventuali righe duplicate prima di inserire le nuove
@@ -548,7 +570,7 @@ function save_availability($conn, $teacher_email, $availability) {
             $slot['ora_fine']
         );
         if (!$stmt->execute()) {
-            error_log("Errore nell'inserimento della disponibilità: " . $stmt->error);
+            calendar_log("Errore nell'inserimento della disponibilità: " . $stmt->error);
             $success = false;
         } else {
             // Prima controlla se esiste già una lezione per questa disponibilità
@@ -590,7 +612,7 @@ function save_availability($conn, $teacher_email, $availability) {
                     $end_time_str = $formatted_date . ' ' . $end_time;
                 }
                 
-                error_log("Inserendo lezione: $titolo - $start_time_str - $end_time_str");
+                calendar_log("Inserendo lezione: $titolo - $start_time_str - $end_time_str");
                 
                 $lesson_query = "INSERT INTO Lezioni 
                                 (teacher_email, titolo, start_time, end_time, stato) 
@@ -604,7 +626,7 @@ function save_availability($conn, $teacher_email, $availability) {
                 );
                 
                 if (!$lesson_stmt->execute()) {
-                    error_log("Errore nell'inserimento della lezione: " . $lesson_stmt->error);
+                    calendar_log("Errore nell'inserimento della lezione: " . $lesson_stmt->error);
                     $success = false;
                 }
             }
