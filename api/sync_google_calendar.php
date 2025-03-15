@@ -379,82 +379,89 @@ function generate_availability($dates, $events, $preferences) {
     return $availability;
 }
 
-// Updated function to check if a time slot is occupied, now handling all week days correctly
+// Completely rewritten function with enhanced debugging and strict time comparisons
 function is_slot_occupied($date, $slot, $events) {
     $date_str = $slot['data'];
     $day_name = $slot['giorno_settimana'];
     
-    // Create precise time objects for slot
-    $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio']);
-    $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine']);
+    // Create precise time objects for slot with seconds included for accurate comparison
+    $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio'] . ':00');
+    $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine'] . ':00');
     
-    error_log("VERIFICA SLOT: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']}");
+    error_log("🔍 VERIFICA SLOT: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']}");
     
     // Debug variables to track processing
     $total_events = count($events);
-    $checked_events = 0;
     $events_on_this_day = 0;
     
     foreach ($events as $index => $event) {
-        $checked_events++;
         $event_summary = $event['summary'] ?? 'Senza titolo';
         
-        // Get the start and end dates of the event in YYYY-MM-DD format
+        // Extract precise date information
         $event_start_date = $event['start']->format('Y-m-d');
         $event_end_date = $event['end']->format('Y-m-d');
+        $event_start_time = $event['start']->format('H:i:s');
+        $event_end_time = $event['end']->format('H:i:s');
         
-        // First do a quick check - is this event even on the same day?
-        if ($event_start_date === $date_str || 
-            $event_end_date === $date_str || 
-            ($event_start_date < $date_str && $event_end_date > $date_str)) {
-            
+        // Check if this event happens on our target date
+        $event_happens_today = false;
+        
+        // Case 1: Event starts on this date
+        if ($event_start_date === $date_str) {
+            $event_happens_today = true;
+            error_log("  📅 [$day_name] Evento '$event_summary' INIZIA oggi ($date_str)");
+        }
+        // Case 2: Event ends on this date
+        elseif ($event_end_date === $date_str) {
+            $event_happens_today = true;
+            error_log("  📅 [$day_name] Evento '$event_summary' FINISCE oggi ($date_str)");
+        }
+        // Case 3: Event spans over this date (starts before, ends after)
+        elseif ($event_start_date < $date_str && $event_end_date > $date_str) {
+            $event_happens_today = true;
+            error_log("  📅 [$day_name] Evento '$event_summary' ATTRAVERSA oggi ($date_str)");
+        }
+        
+        if ($event_happens_today) {
             $events_on_this_day++;
             
-            // Debug log with extra formatting and context
-            error_log("  [$day_name] $date_str - Evento #$index: '$event_summary' - " . 
-                     $event['start']->format('Y-m-d H:i') . " -> " . 
-                     $event['end']->format('Y-m-d H:i'));
+            // Create clean copies of the event start/end times
+            $check_start = clone $event['start'];
+            $check_end = clone $event['end'];
             
-            // Use clones to avoid modifying the original event times
-            $event_start = clone $event['start'];
-            $event_end = clone $event['end'];
-            
-            // For multi-day events: adjust times to current day's boundaries
+            // Normalize multi-day events to this day's boundaries
             if ($event_start_date < $date_str) {
-                $event_start->setTime(0, 0, 0);
-                $event_start->setDate(
-                    intval(substr($date_str, 0, 4)),
-                    intval(substr($date_str, 5, 2)),
-                    intval(substr($date_str, 8, 2))
-                );
-                error_log("    [$day_name] Evento iniziato in un giorno precedente, aggiustato a: " . $event_start->format('Y-m-d H:i'));
+                // Event starts before today - set to start of today
+                $check_start = new DateTime($date_str . ' 00:00:00');
+                error_log("    ⏰ Evento inizia prima: aggiustato a " . $check_start->format('Y-m-d H:i:s'));
             }
             
             if ($event_end_date > $date_str) {
-                $event_end->setTime(23, 59, 59);
-                $event_end->setDate(
-                    intval(substr($date_str, 0, 4)),
-                    intval(substr($date_str, 5, 2)),
-                    intval(substr($date_str, 8, 2))
-                );
-                error_log("    [$day_name] Evento finisce in un giorno successivo, aggiustato a: " . $event_end->format('Y-m-d H:i'));
+                // Event ends after today - set to end of today
+                $check_end = new DateTime($date_str . ' 23:59:59');
+                error_log("    ⏰ Evento finisce dopo: aggiustato a " . $check_end->format('Y-m-d H:i:s'));
             }
             
-            // Check for overlap with strict comparisons
-            $overlap = ($event_start <= $slot_end && $event_end >= $slot_start);
+            // DEBUG: Show exact times being compared
+            error_log("    🕒 Confronto preciso:");
+            error_log("      - Slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
+            error_log("      - Evento: " . $check_start->format('Y-m-d H:i:s') . " - " . $check_end->format('Y-m-d H:i:s'));
             
-            error_log("    [$day_name] Confronto: Slot {$slot['ora_inizio']}-{$slot['ora_fine']} vs " .
-                      "Evento {$event_start->format('H:i')}-{$event_end->format('H:i')} => " . 
-                      ($overlap ? "OCCUPATO ⛔" : "Non sovrapposto ✓"));
-            
-            if ($overlap) {
+            // Check for overlap with precise comparison
+            // An event overlaps with the slot if:
+            // 1. The event starts before or at the same time the slot ends AND
+            // 2. The event ends after or at the same time the slot starts
+            if (($check_start <= $slot_end) && ($check_end >= $slot_start)) {
+                error_log("    ❌ SOVRAPPOSIZIONE TROVATA: Slot bloccato da '$event_summary'");
                 return true; // Slot is occupied
+            } else {
+                error_log("    ✅ Nessuna sovrapposizione");
             }
         }
     }
     
-    error_log("SLOT LIBERO [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']} " .
-              "(Controllati $events_on_this_day eventi per questo giorno su $total_events totali)");
+    error_log("🆓 SLOT LIBERO: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']} " .
+              "(Controllati $events_on_this_day eventi su questo giorno)");
     
     return false; // Slot is free
 }
