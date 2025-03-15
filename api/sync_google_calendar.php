@@ -470,7 +470,6 @@ function is_slot_occupied($date, $slot, $events) {
     calendar_log("🔍 VERIFICA SLOT: [$day_name] $date_str {$slot['ora_inizio']}-{$slot['ora_fine']}");
     
     // Debug variables to track processing
-    $total_events = count($events);
     $events_on_this_day = 0;
     
     foreach ($events as $index => $event) {
@@ -479,8 +478,6 @@ function is_slot_occupied($date, $slot, $events) {
         // Extract precise date information
         $event_start_date = $event['start']->format('Y-m-d');
         $event_end_date = $event['end']->format('Y-m-d');
-        $event_start_time = $event['start']->format('H:i:s');
-        $event_end_time = $event['end']->format('H:i:s');
         
         // Check if this event happens on our target date
         $event_happens_today = false;
@@ -510,13 +507,11 @@ function is_slot_occupied($date, $slot, $events) {
             
             // Normalize multi-day events to this day's boundaries
             if ($event_start_date < $date_str) {
-                // Event starts before today - set to start of today
                 $check_start = new DateTime($date_str . ' 00:00:00');
                 calendar_log("    ⏰ Evento inizia prima: aggiustato a " . $check_start->format('Y-m-d H:i:s'));
             }
             
             if ($event_end_date > $date_str) {
-                // Event ends after today - set to end of today
                 $check_end = new DateTime($date_str . ' 23:59:59');
                 calendar_log("    ⏰ Evento finisce dopo: aggiustato a " . $check_end->format('Y-m-d H:i:s'));
             }
@@ -526,11 +521,12 @@ function is_slot_occupied($date, $slot, $events) {
             calendar_log("      - Slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
             calendar_log("      - Evento: " . $check_start->format('Y-m-d H:i:s') . " - " . $check_end->format('Y-m-d H:i:s'));
             
-            // Check for overlap with precise comparison
-            // An event overlaps with the slot if:
-            // 1. The event starts before or at the same time the slot ends AND
-            // 2. The event ends after or at the same time the slot starts
-            if (($check_start <= $slot_end) && ($check_end >= $slot_start)) {
+            // KEY FIX: Modified overlap logic to be more precise
+            // A slot is occupied if:
+            // 1. The event starts BEFORE the slot ends AND
+            // 2. The event ends AFTER the slot starts
+            // The < and > operators (instead of <= and >=) prevent false overlaps at boundary points
+            if (($check_start < $slot_end) && ($check_end > $slot_start)) {
                 calendar_log("    ❌ SOVRAPPOSIZIONE TROVATA: Slot bloccato da '$event_summary'");
                 return true; // Slot is occupied
             } else {
