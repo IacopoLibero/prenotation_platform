@@ -386,7 +386,16 @@ function is_slot_occupied($date, $slot, $events) {
     $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio']);
     $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine']);
     
-    error_log("Verifica slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
+    $day_of_week = date('N', strtotime($date_str)); // 1 (lunedì) a 7 (domenica)
+    $day_name = $slot['giorno_settimana'];
+    
+    error_log("Verifica slot per $date_str (giorno $day_of_week, $day_name): " . 
+              $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
+    
+    // Debug: Conta quanti eventi stiamo controllando
+    $events_count = count($events);
+    error_log("Controllo contro $events_count eventi totali");
+    $checked_for_day = 0;
     
     foreach ($events as $index => $event) {
         // Verifica se l'evento è nello stesso giorno dello slot
@@ -397,8 +406,10 @@ function is_slot_occupied($date, $slot, $events) {
         if ($event_start_date == $date_str || $event_end_date == $date_str || 
             ($event_start_date < $date_str && $event_end_date > $date_str)) {
             
+            $checked_for_day++;
+            
             // Debug
-            error_log("Confronto evento #$index (" . ($event['summary'] ?? 'Senza titolo') . "): " . 
+            error_log("[$day_name] Controllo evento #$index (" . ($event['summary'] ?? 'Senza titolo') . "): " . 
                       $event['start']->format('Y-m-d H:i:s') . " - " . 
                       $event['end']->format('Y-m-d H:i:s'));
             
@@ -409,31 +420,31 @@ function is_slot_occupied($date, $slot, $events) {
             // Se l'evento inizia prima del giorno corrente, imposta l'inizio alle 00:00 del giorno corrente
             if ($event_start_date < $date_str) {
                 $event_start = new DateTime($date_str . ' 00:00:00');
-                error_log("Evento iniziato in un giorno precedente, aggiustato a: " . $event_start->format('Y-m-d H:i:s'));
+                error_log("[$day_name] Evento iniziato in un giorno precedente, aggiustato a: " . $event_start->format('Y-m-d H:i:s'));
             }
             
             // Se l'evento finisce dopo il giorno corrente, imposta la fine alle 23:59 del giorno corrente
             if ($event_end_date > $date_str) {
                 $event_end = new DateTime($date_str . ' 23:59:59');
-                error_log("Evento finisce in un giorno successivo, aggiustato a: " . $event_end->format('Y-m-d H:i:s'));
+                error_log("[$day_name] Evento finisce in un giorno successivo, aggiustato a: " . $event_end->format('Y-m-d H:i:s'));
             }
             
             // Controlla sovrapposizione: l'evento si sovrappone allo slot se
-            // l'inizio dell'evento è prima della fine dello slot E
-            // la fine dell'evento è dopo l'inizio dello slot
+            // l'inizio dell'evento è prima o uguale alla fine dello slot E
+            // la fine dell'evento è dopo o uguale all'inizio dello slot
             if (($event_start <= $slot_end) && ($event_end >= $slot_start)) {
-                error_log("OCCUPATO: Sovrapposizione trovata con " . ($event['summary'] ?? 'Senza titolo') . 
-                          " [" . $event_start->format('Y-m-d H:i:s') . "-" . $event_end->format('Y-m-d H:i:s') . "]");
+                error_log("OCCUPATO [$day_name]: Sovrapposizione trovata con " . ($event['summary'] ?? 'Senza titolo') . 
+                          " [" . $event_start->format('H:i') . "-" . $event_end->format('H:i') . "]");
                 return true;
             } else {
-                error_log("Nessuna sovrapposizione: " . 
+                error_log("[$day_name] Nessuna sovrapposizione: " . 
                           "Evento: " . $event_start->format('H:i') . "-" . $event_end->format('H:i') . " vs " . 
                           "Slot: " . $slot_start->format('H:i') . "-" . $slot_end->format('H:i'));
             }
         }
     }
     
-    error_log("LIBERO: Lo slot è disponibile");
+    error_log("LIBERO [$day_name]: Lo slot è disponibile (controllati $checked_for_day eventi per questo giorno)");
     return false;
 }
 
