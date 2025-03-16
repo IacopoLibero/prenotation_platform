@@ -19,47 +19,34 @@ if (empty($teacher_email)) {
     exit;
 }
 
-// Ottieni la disponibilità
-$query = "SELECT d.giorno_settimana, d.ora_inizio, d.ora_fine, 
-          CASE WHEN p.google_calendar_link IS NOT NULL THEN 1 ELSE 0 END as from_google_calendar,
-          l.id as lesson_id, l.stato
-          FROM Disponibilita d
-          JOIN Professori p ON d.teacher_email = p.email
-          LEFT JOIN Lezioni l ON d.teacher_email = l.teacher_email 
-                AND DATE(l.start_time) = DATE(CURDATE() + INTERVAL 
-                    CASE 
-                        WHEN DAYOFWEEK(CURDATE()) <= CASE 
-                            WHEN d.giorno_settimana = 'lunedi' THEN 2
-                            WHEN d.giorno_settimana = 'martedi' THEN 3
-                            WHEN d.giorno_settimana = 'mercoledi' THEN 4
-                            WHEN d.giorno_settimana = 'giovedi' THEN 5
-                            WHEN d.giorno_settimana = 'venerdi' THEN 6
-                            WHEN d.giorno_settimana = 'sabato' THEN 7
-                            WHEN d.giorno_settimana = 'domenica' THEN 1
-                        END
-                        THEN CASE 
-                            WHEN d.giorno_settimana = 'lunedi' THEN 2
-                            WHEN d.giorno_settimana = 'martedi' THEN 3
-                            WHEN d.giorno_settimana = 'mercoledi' THEN 4
-                            WHEN d.giorno_settimana = 'giovedi' THEN 5
-                            WHEN d.giorno_settimana = 'venerdi' THEN 6
-                            WHEN d.giorno_settimana = 'sabato' THEN 7
-                            WHEN d.giorno_settimana = 'domenica' THEN 1
-                        END - DAYOFWEEK(CURDATE())
-                        ELSE CASE 
-                            WHEN d.giorno_settimana = 'lunedi' THEN 9
-                            WHEN d.giorno_settimana = 'martedi' THEN 10
-                            WHEN d.giorno_settimana = 'mercoledi' THEN 11
-                            WHEN d.giorno_settimana = 'giovedi' THEN 12
-                            WHEN d.giorno_settimana = 'venerdi' THEN 13
-                            WHEN d.giorno_settimana = 'sabato' THEN 14
-                            WHEN d.giorno_settimana = 'domenica' THEN 8
-                        END - DAYOFWEEK(CURDATE())
-                    END DAY)
-                AND TIME(l.start_time) = d.ora_inizio
-          WHERE d.teacher_email = ? 
-          ORDER BY FIELD(d.giorno_settimana, 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'), 
-          d.ora_inizio";
+// Ottieni le lezioni disponibili direttamente dalla tabella Lezioni
+$query = "SELECT 
+          l.id,
+          l.titolo,
+          l.start_time,
+          l.end_time,
+          l.stato,
+          DATE_FORMAT(l.start_time, '%Y-%m-%d') as data,
+          DATE_FORMAT(l.start_time, '%d/%m/%Y') as data_formattata,
+          CASE
+              WHEN DAYOFWEEK(l.start_time) = 2 THEN 'lunedi'
+              WHEN DAYOFWEEK(l.start_time) = 3 THEN 'martedi'
+              WHEN DAYOFWEEK(l.start_time) = 4 THEN 'mercoledi'
+              WHEN DAYOFWEEK(l.start_time) = 5 THEN 'giovedi'
+              WHEN DAYOFWEEK(l.start_time) = 6 THEN 'venerdi'
+              WHEN DAYOFWEEK(l.start_time) = 7 THEN 'sabato'
+              WHEN DAYOFWEEK(l.start_time) = 1 THEN 'domenica'
+          END as giorno_settimana,
+          DATE_FORMAT(l.start_time, '%H:%i') as ora_inizio,
+          DATE_FORMAT(l.end_time, '%H:%i') as ora_fine,
+          CASE WHEN p.google_calendar_link IS NOT NULL THEN 1 ELSE 0 END as from_google_calendar
+          FROM Lezioni l
+          JOIN Professori p ON l.teacher_email = p.email
+          WHERE l.teacher_email = ? 
+          AND l.stato = 'disponibile'
+          AND l.start_time > NOW()
+          ORDER BY l.start_time";
+          
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $teacher_email);
 $stmt->execute();
@@ -67,20 +54,10 @@ $result = $stmt->get_result();
 
 $availability = [];
 while ($row = $result->fetch_assoc()) {
-    // Add date information to each slot
-    $date = calculate_next_date_for_weekday($row['giorno_settimana']);
-    $row['data'] = $date->format('Y-m-d');  // ISO format date
-    $row['data_formattata'] = $date->format('d/m/Y');  // Localized format
-    $row['days_from_today'] = calculate_days_from_today($row['giorno_settimana']);
     $availability[] = $row;
 }
 
-// Sort availability by days from today (closest first)
-usort($availability, function($a, $b) {
-    return $a['days_from_today'] <=> $b['days_from_today'];
-});
-
-// Aggiungi anche l'informazione se l'insegnante usa Google Calendar
+// Recupera se l'insegnante usa Google Calendar
 $query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $teacher_email);
@@ -91,7 +68,7 @@ $teacherInfo = $result->fetch_assoc();
 // Log per debug
 error_log("API get_availability.php - Teacher: $teacher_email, Has Calendar: " . 
           (!empty($teacherInfo['google_calendar_link']) ? 'Yes' : 'No') . 
-          ", Availability count: " . count($availability));
+          ", Lesson availability count: " . count($availability));
 
 header('Content-Type: application/json');
 echo json_encode([
@@ -99,61 +76,6 @@ echo json_encode([
     'availability' => $availability,
     'uses_google_calendar' => !empty($teacherInfo['google_calendar_link'])
 ]);
-
-// Function to calculate the next occurrence of a given weekday
-function calculate_next_date_for_weekday($weekday) {
-    $weekdays = [
-        'lunedi' => 1,
-        'martedi' => 2,
-        'mercoledi' => 3,
-        'giovedi' => 4,
-        'venerdi' => 5,
-        'sabato' => 6,
-        'domenica' => 7
-    ];
-    
-    $today = new DateTime();
-    $target_day_num = $weekdays[$weekday];
-    $current_day_num = (int)$today->format('N'); // 1 (Monday) to 7 (Sunday)
-    
-    // Calculate days to add
-    if ($target_day_num >= $current_day_num) {
-        // The next occurrence is this week
-        $days_to_add = $target_day_num - $current_day_num;
-    } else {
-        // The next occurrence is next week
-        $days_to_add = 7 - ($current_day_num - $target_day_num);
-    }
-    
-    // Create a new DateTime for the calculated date
-    $next_date = clone $today;
-    $next_date->modify("+$days_to_add days");
-    
-    return $next_date;
-}
-
-// Function to calculate days from today (0 = today, 1 = tomorrow, etc.)
-function calculate_days_from_today($weekday) {
-    $weekdays = [
-        'lunedi' => 1,
-        'martedi' => 2,
-        'mercoledi' => 3,
-        'giovedi' => 4,
-        'venerdi' => 5,
-        'sabato' => 6,
-        'domenica' => 7
-    ];
-    
-    $today = new DateTime();
-    $target_day_num = $weekdays[$weekday];
-    $current_day_num = (int)$today->format('N'); // 1 (Monday) to 7 (Sunday)
-    
-    if ($target_day_num >= $current_day_num) {
-        return $target_day_num - $current_day_num; // Days ahead this week
-    } else {
-        return 7 - ($current_day_num - $target_day_num); // Days ahead next week
-    }
-}
 
 $stmt->close();
 $conn->close();

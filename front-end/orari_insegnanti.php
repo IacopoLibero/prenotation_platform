@@ -290,14 +290,14 @@ $result = $stmt->get_result();
                         if (data.uses_google_calendar) {
                             container.innerHTML = `
                                 <div class="no-availability">
-                                    <p>Questo insegnante utilizza Google Calendar ma non ha ancora disponibilità sincronizzate.</p>
+                                    <p>Questo insegnante utilizza Google Calendar ma non ha ancora lezioni disponibili.</p>
                                     <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
                                 </div>
                             `;
                         } else {
                             container.innerHTML = `
                                 <div class="no-availability">
-                                    <p>Questo insegnante non ha ancora impostato la sua disponibilità.</p>
+                                    <p>Questo insegnante non ha ancora impostato lezioni disponibili.</p>
                                 </div>
                             `;
                         }
