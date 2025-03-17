@@ -650,7 +650,8 @@ function save_availability($conn, $teacher_email, $availability) {
     $saved_by_day_and_date = [];
     
     // Prepare statements for database operations
-    $insert_query = "INSERT INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
+    // MODIFICA: Usa REPLACE invece di INSERT per gestire i duplicati
+    $insert_query = "REPLACE INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
                      VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($insert_query);
     
