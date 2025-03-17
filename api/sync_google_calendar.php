@@ -39,6 +39,32 @@ register_shutdown_function(function() {
     }
 });
 
+// Recupera le preferenze di disponibilità del professore
+function get_teacher_preferences($conn, $teacher_email) {
+    $query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        return $result->fetch_assoc();
+    } else {
+        // Valori predefiniti se non ci sono preferenze
+        return [
+            'weekend' => 0,
+            'mattina' => 1,
+            'pomeriggio' => 1,
+            'ora_inizio_mattina' => '08:00:00',
+            'ora_fine_mattina' => '13:00:00',
+            'ora_inizio_pomeriggio' => '14:00:00',
+            'ora_fine_pomeriggio' => '19:00:00',
+            'ore_prima_evento' => 0,
+            'ore_dopo_evento' => 0
+        ];
+    }
+}
+
 try {
     calendar_log("Inizializzazione sincronizzazione calendario");
     session_start();
@@ -66,6 +92,12 @@ try {
     if (!$data || empty($data['google_calendar_link'])) {
         throw new Exception('Nessun calendario Google configurato');
     }
+    
+    // Carica le preferenze dell'utente per l'uso nelle funzioni
+    global $preferences;
+    $preferences = get_teacher_preferences($conn, $teacher_email);
+    calendar_log("Preferenze caricate: buffer prima=" . $preferences['ore_prima_evento'] . 
+                 "h, buffer dopo=" . $preferences['ore_dopo_evento'] . "h");
     
     // Verifica l'URL del calendario prima di procedere
     $calendar_url = $data['google_calendar_link'];
@@ -491,6 +523,8 @@ function generate_availability($dates, $events, $preferences) {
 
 // Fix is_slot_occupied function to handle date_str consistently
 function is_slot_occupied($date_str, $slot, $events) {
+    global $preferences; // Accede alle preferenze dell'utente
+    
     // Get day name for logging
     $day_name = $slot['giorno_settimana'];
     
@@ -502,6 +536,14 @@ function is_slot_occupied($date_str, $slot, $events) {
     
     // Debug variables to track processing
     $events_on_this_day = 0;
+    
+    // Recupera i buffer di tempo dalle preferenze
+    $buffer_before = isset($preferences['ore_prima_evento']) ? floatval($preferences['ore_prima_evento']) : 0;
+    $buffer_after = isset($preferences['ore_dopo_evento']) ? floatval($preferences['ore_dopo_evento']) : 0;
+    
+    if ($buffer_before > 0 || $buffer_after > 0) {
+        calendar_log("🕒 Buffer configurati: prima=" . $buffer_before . "h, dopo=" . $buffer_after . "h");
+    }
     
     foreach ($events as $index => $event) {
         $event_summary = $event['summary'] ?? 'Senza titolo';
@@ -517,12 +559,12 @@ function is_slot_occupied($date_str, $slot, $events) {
         if ($event_start_date === $date_str) {
             $event_happens_today = true;
             calendar_log("  📅 [$day_name] Evento '$event_summary' INIZIA oggi ($date_str)");
-        }
+        } 
         // Case 2: Event ends on this date
         elseif ($event_end_date === $date_str) {
             $event_happens_today = true;
             calendar_log("  📅 [$day_name] Evento '$event_summary' FINISCE oggi ($date_str)");
-        }
+        } 
         // Case 3: Event spans over this date (starts before, ends after)
         elseif ($event_start_date < $date_str && $event_end_date > $date_str) {
             $event_happens_today = true;
@@ -547,13 +589,32 @@ function is_slot_occupied($date_str, $slot, $events) {
                 calendar_log("    ⏰ Evento finisce dopo: aggiustato a " . $check_end->format('Y-m-d H:i:s'));
             }
             
+            // Applica i buffer di tempo prima e dopo l'evento
+            $event_start_with_buffer = clone $check_start;
+            $event_end_with_buffer = clone $check_end;
+            
+            if ($buffer_before > 0) {
+                $minutes_before = $buffer_before * 60;
+                $event_start_with_buffer->modify("-$minutes_before minutes");
+                calendar_log("    🕒 Buffer prima: " . $minutes_before . " min, nuovo inizio " . 
+                           $event_start_with_buffer->format('H:i'));
+            }
+            
+            if ($buffer_after > 0) {
+                $minutes_after = $buffer_after * 60;
+                $event_end_with_buffer->modify("+$minutes_after minutes");
+                calendar_log("    🕒 Buffer dopo: " . $minutes_after . " min, nuova fine " . 
+                           $event_end_with_buffer->format('H:i'));
+            }
+            
             // DEBUG: Show exact times being compared
             calendar_log("    🕒 Confronto preciso:");
             calendar_log("      - Slot: " . $slot_start->format('Y-m-d H:i:s') . " - " . $slot_end->format('Y-m-d H:i:s'));
-            calendar_log("      - Evento: " . $check_start->format('Y-m-d H:i:s') . " - " . $check_end->format('Y-m-d H:i:s'));
+            calendar_log("      - Evento (con buffer): " . $event_start_with_buffer->format('Y-m-d H:i:s') . 
+                       " - " . $event_end_with_buffer->format('Y-m-d H:i:s'));
             
-            // Use < and > for boundary detection instead of <= and >=
-            if (($check_start < $slot_end) && ($check_end > $slot_start)) {
+            // Controllo sovrapposizione con l'evento considerando i buffer
+            if (($event_start_with_buffer < $slot_end) && ($event_end_with_buffer > $slot_start)) {
                 calendar_log("    ❌ SOVRAPPOSIZIONE TROVATA: Slot bloccato da '$event_summary'");
                 return true; // Slot is occupied
             } else {
@@ -575,16 +636,13 @@ function save_availability($conn, $teacher_email, $availability) {
         return true;
     }
     
-    $success = true;
-    calendar_log("Salvataggio di " . count($availability) . " disponibilità per $teacher_email");
-    
     // Track slots saved by day of week AND date to detect anomalies
     $saved_by_day = [
-        'lunedi' => 0, 
+        'lunedi' => 0,
         'martedi' => 0,
         'mercoledi' => 0,
         'giovedi' => 0,
-        'venerdi' => 0, 
+        'venerdi' => 0,
         'sabato' => 0,
         'domenica' => 0
     ];
@@ -592,11 +650,15 @@ function save_availability($conn, $teacher_email, $availability) {
     $saved_by_day_and_date = [];
     
     // Prepare statements for database operations
-    $query = "REPLACE INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
-              VALUES (?, ?, ?, ?)";
-    $stmt = $conn->prepare($query);
+    $insert_query = "INSERT INTO Disponibilita (teacher_email, giorno_settimana, ora_inizio, ora_fine) 
+                     VALUES (?, ?, ?, ?)";
+    $stmt = $conn->prepare($insert_query);
     
-    // CRUCIAL FIX: First check for all booked lessons to avoid creating duplicates
+    $lesson_query = "INSERT INTO Lezioni (teacher_email, titolo, start_time, end_time, stato) 
+                     VALUES (?, ?, ?, ?, 'disponibile')";
+    $lesson_stmt = $conn->prepare($lesson_query);
+    
+    // CRUCIAL FIX: Check if this slot is already booked before creating a new one
     $booked_slots = [];
     $booked_query = "SELECT DATE_FORMAT(start_time, '%Y-%m-%d') as date, 
                     DATE_FORMAT(start_time, '%H:%i') as start_time,
@@ -613,7 +675,10 @@ function save_availability($conn, $teacher_email, $availability) {
         $booked_slots[$key] = true;
         calendar_log("Slot già prenotato: {$row['date']} {$row['start_time']}-{$row['end_time']}");
     }
-
+    
+    $success = true;
+    calendar_log("Salvataggio " . count($availability) . " disponibilità per $teacher_email");
+    
     foreach ($availability as $slot) {
         $day_name = $slot['giorno_settimana'];
         $date_str = $slot['data'];
@@ -641,7 +706,6 @@ function save_availability($conn, $teacher_email, $availability) {
         
         // Insert into database
         $stmt->bind_param("ssss", $teacher_email, $day_name, $slot['ora_inizio'], $slot['ora_fine']);
-        
         if (!$stmt->execute()) {
             calendar_log("Errore nell'inserimento della disponibilità: " . $stmt->error);
             $success = false;
@@ -679,11 +743,6 @@ function save_availability($conn, $teacher_email, $availability) {
                 }
                 
                 calendar_log("Inserendo lezione: $titolo - $start_time_str - $end_time_str");
-                
-                $lesson_query = "INSERT INTO Lezioni 
-                                (teacher_email, titolo, start_time, end_time, stato) 
-                                VALUES (?, ?, ?, ?, 'disponibile')";
-                $lesson_stmt = $conn->prepare($lesson_query);
                 $lesson_stmt->bind_param("ssss", $teacher_email, $titolo, $start_time_str, $end_time_str);
                 
                 if (!$lesson_stmt->execute()) {
@@ -694,18 +753,19 @@ function save_availability($conn, $teacher_email, $availability) {
         }
     }
     
-    // Detailed summary output for debugging
+    // Display summary of slots saved by day
     calendar_log("\n===== RIEPILOGO SLOT SALVATI PER GIORNO =====");
     foreach ($saved_by_day as $day => $count) {
         calendar_log("$day: $count slot");
     }
     
+    // Display summary of slots saved by date
     calendar_log("\n===== RIEPILOGO SLOT SALVATI PER DATA =====");
     foreach ($saved_by_date as $date => $count) {
         calendar_log("$date: $count slot");
     }
     
-    // Add cross-verification of days and dates
+    // Verification of days and dates
     calendar_log("\n===== VERIFICA CORRISPONDENZA GIORNO-DATA =====");
     foreach ($saved_by_day_and_date as $date => $days) {
         $day_of_week = date('N', strtotime($date));
@@ -748,34 +808,24 @@ function verify_saved_availability($conn, $teacher_email) {
     $stmt->execute();
     $result = $stmt->get_result();
     
-    calendar_log("Disponibilità uniche per giorno e ora:");
-    $days = [];
     while ($row = $result->fetch_assoc()) {
         $day = $row['giorno_settimana'];
-        if (!isset($days[$day])) $days[$day] = 0;
-        $days[$day]++;
-        calendar_log("- {$row['giorno_settimana']} {$row['ora_inizio']}: {$row['count_slots']} slot");
+        calendar_log("- $day: {$row['ora_inizio']}: {$row['count_slots']} slot");
     }
     
-    calendar_log("\nRiepilogo per giorno della settimana:");
-    foreach ($days as $day => $count) {
-        calendar_log("- $day: $count fasce orarie uniche");
-    }
-    
-    // Check dates with their day names in Lezioni
+    // Check unique day-hour combinations in Lezioni
     $query = "SELECT DATE_FORMAT(start_time, '%Y-%m-%d') as date, 
              DATE_FORMAT(start_time, '%W') as day_name, 
              COUNT(*) as count 
              FROM Lezioni 
              WHERE teacher_email = ? AND stato = 'disponibile' 
              GROUP BY DATE_FORMAT(start_time, '%Y-%m-%d') 
-             ORDER BY DATE_FORMAT(start_time, '%Y-%m-%d')";
+             ORDER BY start_time";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $teacher_email);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    calendar_log("\nLezioni per data:");
     $count_by_day_name = [];
     while ($row = $result->fetch_assoc()) {
         $day_name = $row['day_name'];
@@ -787,6 +837,13 @@ function verify_saved_availability($conn, $teacher_email) {
     calendar_log("\nRiepilogo lezioni per giorno della settimana:");
     foreach ($count_by_day_name as $day => $count) {
         calendar_log("- $day: $count lezioni");
+    }
+    
+    calendar_log("Disponibilità uniche per giorno e ora:");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        calendar_log("- {$row['giorno_settimana']} {$row['ora_inizio']}: {$row['count_slots']} slot");
     }
     
     calendar_log("\nDettaglio orari per ogni giorno:");
@@ -811,8 +868,8 @@ function verify_saved_availability($conn, $teacher_email) {
             $slots_count = 1;
             calendar_log("- {$row['date']}: {$row['time']} ({$row['titolo']})");
         } else {
-            $slots_count++;
             calendar_log("  {$row['time']} ({$row['titolo']})");
+            $slots_count++;
         }
     }
     if ($current_date != '') {
@@ -820,11 +877,6 @@ function verify_saved_availability($conn, $teacher_email) {
     }
     
     calendar_log("=================================================");
-    return true;
 }
 
-// If the script reaches here normally, make sure any content is sent
-if (ob_get_length() > 0) {
-    ob_end_flush();
-}
 ?>
