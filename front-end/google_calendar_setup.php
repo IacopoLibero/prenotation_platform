@@ -102,6 +102,19 @@ $calendar_link = $row['google_calendar_link'] ?? '';
             margin-bottom: 20px;
             border-radius: 4px;
         }
+        .buffer-options {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .buffer-option {
+            margin-bottom: 15px;
+        }
+        .buffer-input {
+            width: 70px !important;
+            display: inline-block;
+            margin: 0 10px;
+        }
     </style>
 </head>
 <body>
@@ -190,6 +203,23 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                             </div>
                         </div>
                         
+                        <div class="buffer-options">
+                            <h3>Tempo di buffer tra eventi</h3>
+                            <p class="info-text">Imposta un tempo di buffer prima e dopo gli eventi del tuo calendario per evitare sovrapposizioni.</p>
+                            
+                            <div class="buffer-option">
+                                <label for="ore_prima_evento">Non disponibile prima di un evento per:</label>
+                                <input type="number" id="ore_prima_evento" name="ore_prima_evento" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo $preferences ? $preferences['ore_prima_evento'] : '0'; ?>"> ore
+                                <p class="help-text">Ti darà tempo per prepararti prima dell'evento.</p>
+                            </div>
+                            
+                            <div class="buffer-option">
+                                <label for="ore_dopo_evento">Non disponibile dopo un evento per:</label>
+                                <input type="number" id="ore_dopo_evento" name="ore_dopo_evento" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo $preferences ? $preferences['ore_dopo_evento'] : '0'; ?>"> ore
+                                <p class="help-text">Ti darà tempo per riposare dopo l'evento.</p>
+                            </div>
+                        </div>
+                        
                         <button type="submit" class="btn-add">Salva e Sincronizza</button>
                     </form>
                 </div>
@@ -221,6 +251,8 @@ $calendar_link = $row['google_calendar_link'] ?? '';
             const oraFineMattina = document.getElementById('ora_fine_mattina').value;
             const oraInizioPomeriggio = document.getElementById('ora_inizio_pomeriggio').value;
             const oraFinePomeriggio = document.getElementById('ora_fine_pomeriggio').value;
+            const orePrimaEvento = document.getElementById('ore_prima_evento').value;
+            const oreDopoEvento = document.getElementById('ore_dopo_evento').value;
             
             // Validazione base
             if (!calendarLink) {
@@ -252,6 +284,8 @@ $calendar_link = $row['google_calendar_link'] ?? '';
             formData.append('ora_fine_mattina', oraFineMattina);
             formData.append('ora_inizio_pomeriggio', oraInizioPomeriggio);
             formData.append('ora_fine_pomeriggio', oraFinePomeriggio);
+            formData.append('ore_prima_evento', orePrimaEvento);
+            formData.append('ore_dopo_evento', oreDopoEvento);
             
             // Mostriamo un messaggio di attesa
             const submitBtn = this.querySelector('button[type="submit"]');
