@@ -107,7 +107,6 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'studente'){
             <ul>
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
-                <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                 <li><a href="../login/logout.php">Logout</a></li>
             </ul>
         </nav>

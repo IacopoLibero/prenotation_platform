@@ -22,8 +22,6 @@
                 <li><a href="user_account.php">Account</a></li>
                 <?php if($isTeacher): ?>
                 <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                <?php else: ?>
-                <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                 <?php endif; ?>
                 <li><a href="../login/logout.php">Logout</a></li>
             </ul>
