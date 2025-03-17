@@ -289,9 +289,6 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                 return response.text();
             })
             .then(responseText => {
-                // Debug - log the raw response
-                console.log("Raw API Response:", responseText);
-                
                 // Check if the response is actually empty
                 if (!responseText || responseText.trim() === '') {
                     throw new Error('Il server ha restituito una risposta vuota. Controlla i log del server.');
@@ -319,9 +316,6 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                 } else if (data) {
                     // Mostra il messaggio di errore
                     alert('Errore durante la sincronizzazione: ' + data.message);
-                    if (data.debug_info) {
-                        console.error('Debug info:', data.debug_info);
-                    }
                 } else {
                     throw new Error('Risposta non valida dal server');
                 }
@@ -329,7 +323,6 @@ $calendar_link = $row['google_calendar_link'] ?? '';
             .catch(error => {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
-                console.error('Errore:', error);
                 alert('Si è verificato un errore: ' + error.message);
             });
         });
