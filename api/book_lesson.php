@@ -31,7 +31,7 @@ try {
     $conn->begin_transaction();
     
     // Step 1: Check if the slot is available (not already booked)
-    $check_query = "SELECT id, stato FROM Lezioni 
+    $check_query = "SELECT id, stato, student_email FROM Lezioni 
                    WHERE teacher_email = ? 
                    AND start_time = ? 
                    AND end_time = ?";
@@ -90,7 +90,12 @@ try {
         $lesson = $check_result->fetch_assoc();
         
         if ($lesson['stato'] !== 'disponibile') {
-            throw new Exception('Questa lezione è già stata prenotata.');
+            // Already booked - check if booked by this student
+            if ($lesson['student_email'] === $student_email) {
+                throw new Exception('Hai già prenotato questa lezione.');
+            } else {
+                throw new Exception('Questa lezione è già stata prenotata da un altro studente.');
+            }
         }
         
         // Update the existing lesson

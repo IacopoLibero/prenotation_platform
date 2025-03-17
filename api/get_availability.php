@@ -19,13 +19,23 @@ if (empty($teacher_email)) {
     exit;
 }
 
+// Get current student email for checking bookings
+$current_student_email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+$is_student = ($_SESSION['tipo'] === 'studente');
+
 // Ottieni le lezioni disponibili direttamente dalla tabella Lezioni
+// CRITICAL FIX: Include booked slots and check if booked by current student
 $query = "SELECT 
           l.id,
           l.titolo,
           l.start_time,
           l.end_time,
           l.stato,
+          l.student_email,
+          CASE 
+            WHEN l.stato = 'prenotata' AND l.student_email = ? THEN 'prenotata_da_me' 
+            ELSE l.stato 
+          END as stato_effettivo,
           DATE_FORMAT(l.start_time, '%Y-%m-%d') as data,
           DATE_FORMAT(l.start_time, '%d/%m/%Y') as data_formattata,
           CASE
@@ -43,12 +53,12 @@ $query = "SELECT
           FROM Lezioni l
           JOIN Professori p ON l.teacher_email = p.email
           WHERE l.teacher_email = ? 
-          AND l.stato = 'disponibile'
+          AND (l.stato = 'disponibile' OR (l.stato = 'prenotata' AND l.start_time > NOW()))
           AND l.start_time > NOW()
           ORDER BY l.start_time";
           
 $stmt = $conn->prepare($query);
-$stmt->bind_param("s", $teacher_email);
+$stmt->bind_param("ss", $current_student_email, $teacher_email);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -65,15 +75,10 @@ $stmt->execute();
 $result = $stmt->get_result();
 $teacherInfo = $result->fetch_assoc();
 
-// Log per debug
-error_log("API get_availability.php - Teacher: $teacher_email, Has Calendar: " . 
-          (!empty($teacherInfo['google_calendar_link']) ? 'Yes' : 'No') . 
-          ", Lesson availability count: " . count($availability));
-
 header('Content-Type: application/json');
 echo json_encode([
     'success' => true, 
-    'availability' => $availability,
+    'availability' => $availability, 
     'uses_google_calendar' => !empty($teacherInfo['google_calendar_link'])
 ]);
 
