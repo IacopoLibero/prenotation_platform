@@ -12,18 +12,18 @@
         // Ottieni statistiche per il professore
         $query = "SELECT 
                  COUNT(*) as total_lessons,
-                 SUM(CASE WHEN stato = 'prenotata' THEN 1 ELSE 0 END) as upcoming_lessons,
+                 IFNULL(SUM(CASE WHEN stato = 'prenotata' THEN 1 ELSE 0 END), 0) as upcoming_lessons,
                  COUNT(DISTINCT student_email) as student_count,
-                 SUM(CASE WHEN stato = 'completata' THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END) as completed_minutes
+                 IFNULL(SUM(CASE WHEN stato = 'completata' THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END), 0) as completed_minutes
                  FROM Lezioni 
                  WHERE teacher_email = ?";
     } else {
         // Ottieni statistiche per lo studente
         $query = "SELECT 
                  COUNT(*) as total_lessons,
-                 SUM(CASE WHEN stato = 'prenotata' THEN 1 ELSE 0 END) as upcoming_lessons,
+                 IFNULL(SUM(CASE WHEN stato = 'prenotata' THEN 1 ELSE 0 END), 0) as upcoming_lessons,
                  COUNT(DISTINCT teacher_email) as teacher_count,
-                 SUM(CASE WHEN stato = 'completata' THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END) as completed_minutes
+                 IFNULL(SUM(CASE WHEN stato = 'completata' THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END), 0) as completed_minutes
                  FROM Lezioni 
                  WHERE student_email = ?";
     }
@@ -65,7 +65,6 @@
                 <li><a href="gestione_studenti.php">Studenti</a></li>
                 <li><a href="report.php">Report</a></li>
                 <?php else: ?>
-                <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                 <li><a href="storico_lezioni.php">Storico</a></li>
                 <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
                 <li><a href="orari_insegnanti.php">Orari</a></li>
@@ -140,8 +139,7 @@
                         <p><strong>Come iniziare:</strong></p>
                         <ol>
                             <li>Cerca un insegnante nella sezione <a href="cerca_insegnante.php">Cerca Insegnante</a></li>
-                            <li>Visualizza gli orari disponibili nella sezione <a href="orari_insegnanti.php">Orari</a></li>
-                            <li>Prenota una lezione nella sezione <a href="prenota_lezioni.php">Prenota Lezioni</a></li>
+                            <li>Visualizza gli orari di disponibilità degli insegnanti nella sezione <a href="orari_insegnanti.php">Orari</a></li>
                             <li>Consulta lo storico delle tue lezioni nella sezione <a href="storico_lezioni.php">Storico</a></li>
                         </ol>
                     <?php endif; ?>
