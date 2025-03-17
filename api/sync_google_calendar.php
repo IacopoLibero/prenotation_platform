@@ -113,14 +113,14 @@ try {
     $availability = generate_availability($dates, $events, $data);
     
     // Prima elimina le vecchie disponibilità non ancora prenotate
-    // Modifico la query per evitare l'errore di colonna sconosciuta
     calendar_log("Eliminazione vecchie disponibilità");
     $delete_query = "DELETE FROM Disponibilita WHERE teacher_email = ?";
     $stmt = $conn->prepare($delete_query);
     $stmt->bind_param("s", $teacher_email);
     $stmt->execute();
     
-    // Elimina anche le vecchie lezioni che sono ancora disponibili
+    // Elimina solo le vecchie lezioni che sono ancora disponibili
+    // NON eliminare lezioni prenotate!
     $delete_lessons_query = "DELETE FROM Lezioni WHERE teacher_email = ? AND stato = 'disponibile'";
     $stmt = $conn->prepare($delete_lessons_query);
     $stmt->bind_param("s", $teacher_email);
@@ -596,6 +596,24 @@ function save_availability($conn, $teacher_email, $availability) {
               VALUES (?, ?, ?, ?)";
     $stmt = $conn->prepare($query);
     
+    // CRUCIAL FIX: First check for all booked lessons to avoid creating duplicates
+    $booked_slots = [];
+    $booked_query = "SELECT DATE_FORMAT(start_time, '%Y-%m-%d') as date, 
+                    DATE_FORMAT(start_time, '%H:%i') as start_time,
+                    DATE_FORMAT(end_time, '%H:%i') as end_time
+                    FROM Lezioni 
+                    WHERE teacher_email = ? AND stato = 'prenotata'";
+    $booked_stmt = $conn->prepare($booked_query);
+    $booked_stmt->bind_param("s", $teacher_email);
+    $booked_stmt->execute();
+    $booked_result = $booked_stmt->get_result();
+    
+    while ($row = $booked_result->fetch_assoc()) {
+        $key = $row['date'] . '_' . $row['start_time'] . '_' . $row['end_time'];
+        $booked_slots[$key] = true;
+        calendar_log("Slot già prenotato: {$row['date']} {$row['start_time']}-{$row['end_time']}");
+    }
+
     foreach ($availability as $slot) {
         $day_name = $slot['giorno_settimana'];
         $date_str = $slot['data'];
@@ -614,6 +632,13 @@ function save_availability($conn, $teacher_email, $availability) {
         }
         $saved_by_day_and_date[$date_str][$day_name]++;
         
+        // CRUCIAL FIX: Check if this slot is already booked before creating a new one
+        $slot_key = $date_str . '_' . $slot['ora_inizio'] . '_' . $slot['ora_fine'];
+        if (isset($booked_slots[$slot_key])) {
+            calendar_log("Saltando slot già prenotato: {$date_str} {$slot['ora_inizio']}-{$slot['ora_fine']}");
+            continue;  // Skip this slot as it's already booked
+        }
+        
         // Insert into database
         $stmt->bind_param("ssss", $teacher_email, $day_name, $slot['ora_inizio'], $slot['ora_fine']);
         
@@ -625,7 +650,7 @@ function save_availability($conn, $teacher_email, $availability) {
             $check_query = "SELECT id FROM Lezioni 
                            WHERE teacher_email = ? 
                            AND start_time = ? 
-                           AND stato = 'disponibile'";
+                           AND (stato = 'disponibile' OR stato = 'prenotata')";
             $check_stmt = $conn->prepare($check_query);
             $start_time_str = $date_str . ' ' . $slot['ora_inizio'];
             $check_stmt->bind_param("ss", $teacher_email, $start_time_str);
@@ -708,7 +733,7 @@ function save_availability($conn, $teacher_email, $availability) {
     return $success;
 }
 
-// Enhanced verification function
+// Enhanced verification function to check for duplicate slots
 function verify_saved_availability($conn, $teacher_email) {
     calendar_log("\n===== VERIFICA DISPONIBILITÀ NEL DATABASE =====");
     
@@ -740,10 +765,10 @@ function verify_saved_availability($conn, $teacher_email) {
     // Check dates with their day names in Lezioni
     $query = "SELECT DATE_FORMAT(start_time, '%Y-%m-%d') as date, 
              DATE_FORMAT(start_time, '%W') as day_name, 
-             COUNT(*) as count
+             COUNT(*) as count 
              FROM Lezioni 
              WHERE teacher_email = ? AND stato = 'disponibile' 
-             GROUP BY DATE_FORMAT(start_time, '%Y-%m-%d')
+             GROUP BY DATE_FORMAT(start_time, '%Y-%m-%d') 
              ORDER BY DATE_FORMAT(start_time, '%Y-%m-%d')";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $teacher_email);
@@ -767,7 +792,7 @@ function verify_saved_availability($conn, $teacher_email) {
     calendar_log("\nDettaglio orari per ogni giorno:");
     $query = "SELECT DATE_FORMAT(start_time, '%Y-%m-%d') as date, 
              DATE_FORMAT(start_time, '%H:%i') as time, 
-             titolo
+             titolo 
              FROM Lezioni 
              WHERE teacher_email = ? AND stato = 'disponibile' 
              ORDER BY start_time";
@@ -775,7 +800,6 @@ function verify_saved_availability($conn, $teacher_email) {
     $stmt->bind_param("s", $teacher_email);
     $stmt->execute();
     $result = $stmt->get_result();
-    
     $current_date = '';
     $slots_count = 0;
     while ($row = $result->fetch_assoc()) {
