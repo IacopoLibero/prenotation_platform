@@ -98,4 +98,4 @@ Per contribuire al progetto:
 
 ## 📄 Licenza
 
-Questo progetto è distribuito con licenza Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). Vedere il file `LICENSE` per maggiori informazioni.
+Questo progetto è distribuito con licenza [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). Vedere il file [`LICENSE`](./LICENSE) per maggiori informazioni.
