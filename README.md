@@ -1,88 +1,101 @@
-# Sito Programma Lezioni
+# Programma Lezioni
 
-Questo sistema web permette di gestire le prenotazioni delle lezioni private tra insegnanti e studenti.
+Un'applicazione web per la gestione delle lezioni tra insegnanti e studenti, facilitando la prenotazione e l'organizzazione degli incontri formativi.
 
-## Funzionalità Principali
+## 🚀 Caratteristiche Principali
 
-- **Prenotazione Lezioni**: Gli studenti possono prenotare lezioni disponibili tramite un calendario interattivo.
-- **Gestione Orari**: Gli insegnanti possono impostare e gestire i propri orari disponibili per le lezioni.
-- **Integrazione Google Calendar**: Sincronizzazione automatica con Google Calendar per la gestione delle disponibilità.
-- **Notifiche**: Notifiche via email per confermare le prenotazioni e ricordare gli appuntamenti.
-- **Storico Lezioni**: Gli studenti possono visualizzare lo storico delle lezioni prenotate e completate.
+### Per gli Insegnanti
+- **Gestione Lezioni**: Crea, modifica e cancella lezioni
+- **Impostazione Disponibilità**: Configura i tuoi orari disponibili per le lezioni
+- **Integrazione Google Calendar**: Sincronizza la tua disponibilità con Google Calendar
+- **Prenotazioni**: Visualizza e gestisci le prenotazioni ricevute dagli studenti
+- **Gestione Studenti**: Monitora gli studenti che seguono le tue lezioni
+- **Reportistica**: Genera report sulle attività di insegnamento
 
-## Tipi di Account
+### Per gli Studenti
+- **Prenotazione Lezioni**: Visualizza e prenota le lezioni disponibili
+- **Orari Insegnanti**: Controlla la disponibilità degli insegnanti
+- **Storico Lezioni**: Visualizza lo storico delle lezioni prenotate e completate
+- **Cerca Insegnante**: Trova facilmente un insegnante tramite email o parametri di ricerca
 
-Il sito supporta due tipi di account: insegnante e studente, ognuno con funzionalità specifiche.
+## 💻 Tecnologie Utilizzate
 
-### Account Insegnante
+- **Frontend**: HTML, CSS, JavaScript
+- **Backend**: PHP
+- **Database**: MySQL
+- **Integrazione API**: Google Calendar
+- **Autenticazione**: Sistema di login personalizzato con sessioni PHP
 
-- **Gestione Lezioni**: Creare, modificare e cancellare lezioni.
-- **Settare disponibilità**: Impostare disponibilità delle lezioni nel calendario.
-- **Visualizzazione Prenotazioni**: Visualizzare tutte le prenotazioni ricevute.
-- **Gestione Studenti**: Visualizzare e gestire gli studenti che hanno prenotato lezioni.
-- **Reportistica**: Generare report sulle lezioni effettuate, come per esempio il numero di ore.
+## 🛠️ Installazione
 
-### Account Studente
+1. Clona il repository sul tuo server web:
+```bash
+git clone https://github.com/tuousername/programma-lezioni.git
+```
 
-- **Prenotazione Lezioni**: Prenotare lezioni disponibili.
-- **Visualizzazione Orari**: Visualizzare gli orari disponibili degli insegnanti.
-- **Storico Lezioni**: Visualizzare lo storico delle lezioni prenotate e completate.
-- **Cercare un insegnante**: O tramite mail o tramite un link invito.
+2. Importa il database dal file `DB.sql` nel tuo server MySQL:
+```bash
+mysql -u username -p database_name < DB.sql
+```
 
-## Installazione
+3. Configura i parametri di connessione al database modificando il file `connessione.php`:
+```php
+$servername = "localhost";
+$username = "tuousername";
+$password = "tuapassword";
+$dbname = "nome_database";
+```
 
-1. Clona il repository:
-   ```
-   git clone [URL_DEL_REPOSITORY]
-   ```
+4. Configura il server web per puntare alla directory principale del progetto.
 
-2. Importa il file `DB.sql` nel tuo database MySQL.
+5. Accedi all'applicazione tramite browser all'indirizzo del tuo server web.
 
-3. Configura le credenziali del database nel file `connessione.php`.
+## 👨‍🏫 Guida Rapida
 
-4. Assicurati che il server web abbia i permessi di scrittura necessari per le directory di upload e cache.
+### Per gli Insegnanti:
+1. Imposta i tuoi orari di disponibilità nella sezione "Disponibilità"
+2. Crea nuove lezioni nella sezione "Gestisci Lezioni"
+3. Monitora le prenotazioni ricevute nella sezione "Prenotazioni"
+4. Visualizza le statistiche complete nella sezione "Report"
 
-## Configurazione Google Calendar
+### Per gli Studenti:
+1. Cerca un insegnante nella sezione "Cerca Insegnante"
+2. Visualizza gli orari di disponibilità degli insegnanti nella sezione "Orari"
+3. Consulta lo storico delle tue lezioni nella sezione "Storico"
 
-Per configurare la sincronizzazione con Google Calendar, seguire questi passi:
+## 📁 Struttura del Progetto
 
-1. Aggiornare il database con lo script `database_updates.sql`
-2. Configurare un cron job su Altervista per eseguire lo script `cron/update_all_calendars.php` quotidianamente:
-   - Accedi al pannello di controllo di Altervista.
-   - Vai alla sezione "Gestione File" e carica lo script `update_all_calendars.php` nella directory `cron`.
-   - Vai alla sezione "Cron Jobs" o "Operazioni pianificate".
-   - Crea un nuovo cron job con il comando `/membri/nomeutente/cron/update_all_calendars.php` e imposta la frequenza su "Quotidiano".
-3. Ogni insegnante deve:
-   - Rendere pubblico il proprio calendario Google.
-   - Copiare il link iCal del calendario.
-   - Incollare il link nella pagina "Google Calendar" del sito.
-   - Configurare le proprie preferenze di disponibilità.
+- `/api`: Endpoint API per le interazioni client-server
+- `/front-end`: Pagine dell'interfaccia utente
+- `/js`: Script JavaScript
+- `/login`: Sistema di autenticazione
+- `/styles`: Fogli di stile CSS
+- `/error`: Pagine di errore
 
-## Tecnologie Utilizzate
+## 📱 Funzionalità Responsive
 
-- PHP 7.4+
-- MySQL 5.7+
-- HTML5, CSS3, JavaScript
-- Design responsive per dispositivi mobili
-- AJAX per le interazioni dinamiche
+L'applicazione è progettata per funzionare su dispositivi di diverse dimensioni, con layout responsive che si adattano a desktop, tablet e smartphone.
 
-## Struttura del Progetto
+## 🔒 Sicurezza
 
-- `/login/` - Contiene i file relativi all'autenticazione
-- `/front-end/` - Contiene le pagine del pannello di controllo
-- `/api/` - Contiene gli script PHP per le operazioni CRUD
-- `/styles/` - Contiene i file CSS per lo stile
-- `/error/` - Contiene le pagine di errore personalizzate
-- `/utils/` - Contiene funzioni di utilità
+- Protezione contro SQL Injection con prepared statements
+- Autenticazione basata su sessioni
+- Controlli di accesso per ruoli differenti (professori e studenti)
+- Validazione dei dati di input
 
-## Contribuire
+## ⚙️ Personalizzazione
 
-Se desideri contribuire al progetto, puoi farlo nei seguenti modi:
+È possibile personalizzare l'aspetto dell'applicazione modificando i file CSS nella directory `/styles`.
 
-1. Segnalazione di bug o richieste di funzionalità tramite issue
-2. Invio di pull request con miglioramenti o correzioni
-3. Miglioramento della documentazione
+## 🤝 Contributi
 
-## Licenza
+Per contribuire al progetto:
+1. Forkare il repository
+2. Creare un branch per la tua funzionalità (`git checkout -b feature/amazing-feature`)
+3. Committare le modifiche (`git commit -m 'Aggiungi una funzionalità incredibile'`)
+4. Pushare al branch (`git push origin feature/amazing-feature`)
+5. Aprire una Pull Request
 
-Questo progetto è rilasciato sotto la licenza [inserire tipo di licenza]. Vedere il file LICENSE per maggiori dettagli.
+## 📄 Licenza
+
+Questo progetto è distribuito con licenza Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0). Vedere il file `LICENSE` per maggiori informazioni.
