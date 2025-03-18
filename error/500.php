@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Errore del Server</title>
-    <link rel="stylesheet" href="./error.css">
+    <link rel="stylesheet" href="./error.css?v=<?php echo time(); ?>">
 </head>
 <body>
     <div class="error-code">500</div>
