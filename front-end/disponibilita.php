@@ -12,12 +12,7 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
 
 require_once '../connessione.php';
 
-// Add debug function 
-function debug_log($message) {
-    echo "<!-- DEBUG: $message -->\n";
-}
-
-// CRITICAL FIX: Get availability by joining both tables to see complete picture
+// Get availability by joining both tables 
 $email = $_SESSION['email'];
 
 // First, get scheduled lessons from Lezioni table
@@ -46,9 +41,8 @@ $lessons_stmt->bind_param("s", $email);
 $lessons_stmt->execute();
 $lessons_result = $lessons_stmt->get_result();
 
-// Count lessons for debugging
+// Count lessons
 $total_lessons = $lessons_result->num_rows;
-debug_log("Lezioni disponibili trovate: $total_lessons");
 
 // Get availability patterns from Disponibilita table
 $query = "SELECT d.id, d.giorno_settimana, d.ora_inizio, d.ora_fine 
@@ -62,9 +56,8 @@ $stmt->bind_param("s", $email);
 $stmt->execute();
 $disp_result = $stmt->get_result();
 
-// Count available slots for debugging
+// Count available slots
 $total_slots = $disp_result->num_rows;
-debug_log("Pattern di disponibilità trovati: $total_slots");
 
 // Recupera il link di calendario Google
 $query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
@@ -83,7 +76,6 @@ while ($row = $lessons_result->fetch_assoc()) {
         $lessons_by_date[$date_str] = [];
     }
     $lessons_by_date[$date_str][] = $row;
-    debug_log("Lezione trovata: {$row['giorno_settimana']} {$row['data']} {$row['ora_inizio']}-{$row['ora_fine']}");
 }
 
 // Organize lessons by week and day
@@ -138,26 +130,8 @@ foreach ($lessons_by_date as $date_str => $slots) {
     }
 }
 
-// Debug the availability data structure
-$days_with_data = [];
-foreach ($availability_by_week as $week => $days) {
-    foreach ($days as $day => $slots) {
-        if (!empty($slots)) {
-            if (!isset($days_with_data[$day])) {
-                $days_with_data[$day] = [];
-            }
-            $days_with_data[$day][] = $week;
-        }
-    }
-}
-
-foreach ($days_with_data as $day => $weeks) {
-    debug_log("Giorno $day presente nelle settimane: " . implode(", ", $weeks));
-}
-debug_log("Settimane con dati: " . count($availability_by_week));
-
 // Translate day names
-$day_names = [
+$day_translations = [
     'lunedi' => 'Lunedì',
     'martedi' => 'Martedì',
     'mercoledi' => 'Mercoledì',
@@ -166,6 +140,29 @@ $day_names = [
     'sabato' => 'Sabato',
     'domenica' => 'Domenica'
 ];
+
+// Get preferences
+$query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$result = $stmt->get_result();
+$preferences = $result->fetch_assoc() ?: [
+    'weekend' => false,
+    'mattina' => true,
+    'pomeriggio' => true
+];
+
+// Week names for display
+$week_names = [
+    0 => 'Questa settimana',
+    1 => 'Prossima settimana',
+    2 => 'Tra due settimane',
+    3 => 'Tra tre settimane'
+];
+
+// Get current date for calculations
+$current_date = date('Y-m-d');
 ?>
 
 <!DOCTYPE html>
@@ -320,20 +317,6 @@ $day_names = [
             font-size: 0.9em;
             margin-top: 5px;
         }
-        /* Add debug panel styles */
-        .debug-panel {
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-        .debug-panel h3 {
-            margin-top: 0;
-            color: #555;
-        }
     </style>
 </head>
 <body>
@@ -357,16 +340,6 @@ $day_names = [
         <section>
             <h1>La tua disponibilità</h1>
             <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
-            
-            <!-- Debug Panel for Teacher - with enhanced information -->
-            <div class="debug-panel">
-                <h3>Informazioni diagnostiche</h3>
-                <p>Pattern di disponibilità: <?php echo $total_slots; ?></p>
-                <p>Lezioni disponibili: <?php echo $total_lessons; ?></p>
-                <p>Ultimo aggiornamento: <?php echo date('Y-m-d H:i:s'); ?></p>
-                <p>Email: <?php echo $email; ?></p>
-                <p>Settimane generate: <?php echo count($availability_by_week); ?></p>
-            </div>
             
             <div class="availability-section">
                 <?php if($has_google_calendar): ?>
@@ -445,12 +418,8 @@ $day_names = [
         // Variabili globali
         let currentWeek = 0;
         const availabilityData = <?php echo json_encode($availability_by_week); ?>;
-        const dayNames = <?php echo json_encode($day_names); ?>;
+        const dayNames = <?php echo json_encode($day_translations); ?>;
         const maxWeeks = <?php echo count($availability_by_week); ?>;
-        
-        // Log data for debugging
-        console.log("Available weeks:", maxWeeks);
-        console.log("Availability data:", availabilityData);
         
         // Inizializza la pagina
         document.addEventListener('DOMContentLoaded', function() {
@@ -510,7 +479,6 @@ $day_names = [
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
                     if (syncStatus) {
                         syncStatus.textContent = 'Errore: ' + error.message;
                     }

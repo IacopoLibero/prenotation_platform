@@ -16,15 +16,17 @@ function formatTime($minutes) {
 }
 
 /**
- * Controlla se l'utente è autenticato e reindirizza se necessario
+ * Verifica se l'utente è autenticato e reindirizza se necessario
  * 
- * @param string|null $tipo Il tipo di utente richiesto (professore, studente, o null per qualsiasi tipo)
- * @return bool True se l'utente è autenticato e del tipo corretto
+ * @param string|null $tipo Il tipo di utente richiesto (studente/professore)
+ * @return bool True se l'utente è autenticato, altrimenti reindirizza
  */
-function requireLogin($tipo = null) {
-    session_start();
+function check_auth($tipo = null) {
+    if (!isset($_SESSION)) {
+        session_start();
+    }
     
-    if (!isset($_SESSION['user']) || !isset($_SESSION['tipo'])) {
+    if (!isset($_SESSION['user'])) {
         header('Location: ../index.php');
         exit;
     }

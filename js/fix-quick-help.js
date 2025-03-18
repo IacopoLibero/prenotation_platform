@@ -47,35 +47,32 @@ document.addEventListener('DOMContentLoaded', function() {
             list-style-type: decimal !important;
             padding-left: 2rem !important;
             margin: 1.5rem 0 !important;
-            display: block !important;
-            text-align: left !important;
+            line-height: 1.7 !important;
         `;
         
-        // Fix each list item
         const listItems = helpList.querySelectorAll('li');
         listItems.forEach(item => {
             item.style.cssText = `
-                display: list-item !important;
-                margin-bottom: 0.75rem !important;
-                text-align: left !important;
-                list-style-position: outside !important;
-                padding-left: 0.5rem !important;
+                margin-bottom: 0.8rem !important;
             `;
         });
+        
+        const links = helpList.querySelectorAll('a');
+        links.forEach(link => {
+            link.style.cssText = `
+                color: #2da0a8 !important;
+                text-decoration: none !important;
+                font-weight: 500 !important;
+                transition: color 0.2s ease !important;
+            `;
+            
+            link.addEventListener('mouseenter', function() {
+                this.style.color = '#238e95';
+            });
+            
+            link.addEventListener('mouseleave', function() {
+                this.style.color = '#2da0a8';
+            });
+        });
     }
-    
-    // Fix heading style
-    const heading = quickHelpSection.querySelector('h3');
-    if (heading) {
-        heading.style.cssText = `
-            color: #2da0a8 !important;
-            margin-bottom: 1.5rem !important;
-            text-align: center !important;
-            font-size: 1.5rem !important;
-            padding-bottom: 0.5rem !important;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-        `;
-    }
-    
-    console.log('Quick help styling applied via JavaScript');
 });
