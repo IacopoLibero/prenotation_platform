@@ -1,0 +1,66 @@
+.lessons-container {
+    margin-top: 30px;
+}
+.lesson-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    padding: 20px;
+}
+.lesson-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.lesson-title {
+    font-size: 1.2rem;
+    color: #2da0a8;
+    margin: 0;
+}
+.lesson-time {
+    color: #666;
+}
+.lesson-teacher {
+    margin: 10px 0;
+    font-weight: 500;
+}
+.lesson-description {
+    margin-bottom: 15px;
+    color: #333;
+}
+.status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: white;
+}
+.status.prenotata {
+    background-color: #42a5f5;
+}
+.status.completata {
+    background-color: #66bb6a;
+}
+.status.cancellata {
+    background-color: #ef5350;
+}
+.btn-cancel {
+    background-color: #ef5350;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-top: 10px;
+}
+.btn-cancel:hover {
+    background-color: #d32f2f;
+}
+.no-lessons {
+    text-align: center;
+    padding: 50px;
+    color: #666;
+}

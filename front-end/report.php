@@ -82,75 +82,8 @@ $month_names = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../styles/home.css">
+    <link rel="stylesheet" href="../styles/report.css?v=<?php echo time(); ?>">
     <title>Report Lezioni</title>
-    <style>
-        .report-container {
-            margin: 30px 0;
-        }
-        .stat-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 20px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 600;
-            color: #2da0a8;
-            margin: 10px 0;
-        }
-        .stat-label {
-            color: #666;
-            font-size: 0.9rem;
-        }
-        .chart-container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-        .chart-title {
-            color: #2da0a8;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .chart {
-            height: 300px;
-            margin: 0 auto;
-        }
-        .monthly-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .monthly-table th,
-        .monthly-table td {
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
-        }
-        .monthly-table th {
-            background-color: #f5f7fa;
-            font-weight: 600;
-            color: #2da0a8;
-        }
-        .monthly-table tr:hover {
-            background-color: #f5f7fa;
-        }
-        .empty-data {
-            text-align: center;
-            padding: 30px;
-            color: #666;
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -245,5 +178,7 @@ $month_names = [
     <footer>
         <p>&copy; 2023 Programma Lezioni. Tutti i diritti riservati.</p>
     </footer>
+
+    <script src="../js/report.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

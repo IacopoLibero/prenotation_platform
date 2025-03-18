@@ -30,84 +30,8 @@ $result = $stmt->get_result();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../styles/home.css">
+    <link rel="stylesheet" href="../styles/gestione_studenti.css">
     <title>Gestione Studenti</title>
-    <style>
-        .students-container {
-            margin-top: 30px;
-        }
-        .student-card {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            padding: 20px;
-        }
-        .student-name {
-            font-size: 1.2rem;
-            color: #2da0a8;
-            margin-bottom: 5px;
-        }
-        .student-email {
-            color: #666;
-            margin-bottom: 15px;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-            background-color: #f5f7fa;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .stat-item {
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #2da0a8;
-            display: block;
-        }
-        .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-        }
-        .no-students {
-            text-align: center;
-            padding: 50px;
-            color: #666;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .search-container {
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin: 0 auto 30px;
-        }
-        .search-input {
-            width: 100%;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
-        }
-        .student-details-btn {
-            background-color: #2da0a8;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            margin-top: 10px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .student-details-btn:hover {
-            background-color: #238e95;
-        }
-    </style>
 </head>
 <body>
     <header>
@@ -172,23 +96,6 @@ $result = $stmt->get_result();
         <p>&copy; 2023 Programma Lezioni. Tutti i diritti riservati.</p>
     </footer>
 
-    <script>
-        // Funzionalità di ricerca
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            const searchTerm = this.value.toLowerCase();
-            const studentCards = document.querySelectorAll('.student-card');
-            
-            studentCards.forEach(card => {
-                const name = card.querySelector('.student-name').textContent.toLowerCase();
-                const email = card.querySelector('.student-email').textContent.toLowerCase();
-                
-                if (name.includes(searchTerm) || email.includes(searchTerm)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
-    </script>
+    <script src="../js/gestione_studenti.js"></script>
 </body>
 </html>

@@ -8,9 +8,12 @@ Options -Indexes
 </FilesMatch>
 
 # Gestione degli errori personalizzati
+ErrorDocument 400 /error/400.php
+ErrorDocument 401 /error/401.php
 ErrorDocument 404 /error/404.php
 ErrorDocument 403 /error/403.php
 ErrorDocument 500 /error/500.php
+ErrorDocument 503 /error/503.php
 
 # Imposta charset di default
 AddDefaultCharset UTF-8

@@ -133,5 +133,8 @@
     <footer>
         <p>&copy; 2023 Programma Lezioni. Tutti i diritti riservati.</p>
     </footer>
+    
+    <!-- Add reference to the JavaScript file with cache busting -->
+    <script src="../js/user_account.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
