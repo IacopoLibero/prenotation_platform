@@ -99,3 +99,12 @@ Per contribuire al progetto:
 ## 📄 Licenza
 
 Questo progetto è distribuito con licenza [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). Vedere il file [`LICENSE`](./LICENSE.md) per maggiori informazioni.
+
+
+## roadmap per domani
+
+- navbar da sistemare 
+- implementare lezioni di gruppo
+- professore -> lezioni programmate da sistemare
+- professore -> report da sistemare
+- tour generale per verificare il corretto funzionamento
