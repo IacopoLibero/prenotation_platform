@@ -15,7 +15,7 @@ require_once '../connessione.php';
 // Get availability by joining both tables 
 $email = $_SESSION['email'];
 
-// First, get scheduled lessons from Lezioni table
+// First, get scheduled lessons from Lezioni table - REMOVE the "stato = 'disponibile'" filter
 $lessons_query = "SELECT 
                     DATE_FORMAT(start_time, '%Y-%m-%d') as data,
                     DATE_FORMAT(start_time, '%d/%m/%Y') as data_formattata,
@@ -33,7 +33,7 @@ $lessons_query = "SELECT
                     stato,
                     id as lezione_id
                 FROM Lezioni
-                WHERE teacher_email = ? AND stato = 'disponibile'
+                WHERE teacher_email = ? AND start_time >= NOW()
                 ORDER BY start_time";
                 
 $lessons_stmt = $conn->prepare($lessons_query);
