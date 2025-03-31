@@ -7,12 +7,12 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
 
 require_once '../connessione.php';
 
-// Ottieni le lezioni del professore
+// Ottieni le lezioni del professore prenotate da studenti
 $email = $_SESSION['email'];
 $query = "SELECT l.id, l.titolo, l.descrizione, l.start_time, l.end_time, l.stato, s.username as student_name, s.email as student_email
           FROM Lezioni l
           LEFT JOIN Studenti s ON l.student_email = s.email
-          WHERE l.teacher_email = ?
+          WHERE l.teacher_email = ? AND l.student_email IS NOT NULL
           ORDER BY l.start_time DESC";
           
 $stmt = $conn->prepare($query);
