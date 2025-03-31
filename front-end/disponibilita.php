@@ -188,7 +188,7 @@ $current_date = date('Y-m-d');
                 <li><a href="user_account.php">Account</a></li>
                 <?php if($isTeacher): ?>
                     <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                    <li><a href="disponibilita.phprefresh=<?php echo time(); ?>">Disponibilità</a></li>
+                    <li><a href="disponibilita.php?refresh=<?php echo time(); ?>">Disponibilità</a></li>
                     <?php if($has_google_calendar): ?>
                         <li><a href="google_calendar_setup.php">Google Calendar</a></li>
                     <?php endif; ?>
