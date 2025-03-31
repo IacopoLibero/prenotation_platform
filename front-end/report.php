@@ -12,7 +12,6 @@ $email = $_SESSION['email'];
 
 // Totale lezioni per stato
 $query_count = "SELECT 
-                  COUNT(*) as total_lessons,
                   SUM(CASE WHEN stato = 'disponibile' THEN 1 ELSE 0 END) as available_count,
                   SUM(CASE WHEN stato = 'prenotata' THEN 1 ELSE 0 END) as booked_count,
                   SUM(CASE WHEN stato = 'completata' THEN 1 ELSE 0 END) as completed_count,
@@ -27,7 +26,7 @@ $counts = $result_count->fetch_assoc();
 
 // Calcola le ore di lezione
 $query_hours = "SELECT 
-                  SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as total_minutes,
+                  SUM(CASE WHEN stato IN ('prenotata', 'completata') THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END) as total_minutes,
                   SUM(CASE WHEN stato = 'completata' THEN TIMESTAMPDIFF(MINUTE, start_time, end_time) ELSE 0 END) as completed_minutes
                 FROM Lezioni 
                 WHERE teacher_email = ?";
@@ -109,10 +108,6 @@ $month_names = [
             
             <div class="report-container">
                 <div class="stat-cards">
-                    <div class="stat-card">
-                        <div class="stat-value"><?= $counts['total_lessons'] ?: 0 ?></div>
-                        <div class="stat-label">Lezioni Totali</div>
-                    </div>
                     <div class="stat-card">
                         <div class="stat-value"><?= $counts['completed_count'] ?: 0 ?></div>
                         <div class="stat-label">Lezioni Completate</div>

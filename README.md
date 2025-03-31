@@ -105,6 +105,5 @@ Questo progetto è distribuito con licenza [Creative Commons Attribution-NonComm
 
 - navbar da sistemare 
 - implementare lezioni di gruppo
-- professore -> lezioni programmate da sistemare
 - professore -> report da sistemare
 - tour generale per verificare il corretto funzionamento
