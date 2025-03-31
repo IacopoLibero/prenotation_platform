@@ -182,15 +182,28 @@ $current_date = date('Y-m-d');
 <body>
     <header>
         <nav>
-            <div class="logo">Programma Lezioni</div>
+            <div class="logo">Disponibilita</div>
             <ul>
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
-                <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                <li><a href="disponibilita.php?refresh=<?php echo time(); ?>">Disponibilità</a></li>
-                <?php if($has_google_calendar): ?>
-                    <li><a href="google_calendar_setup.php">Google Calendar</a></li>
+                <?php if($isTeacher): ?>
+                    <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
+                    <li><a href="disponibilita.phprefresh=<?php echo time(); ?>">Disponibilità</a></li>
+                    <?php if($has_google_calendar): ?>
+                        <li><a href="google_calendar_setup.php">Google Calendar</a></li>
+                    <?php endif; ?>
+                    <li><a href="prenotazioni.php">Prenotazioni</a></li>
+                    <li><a href="gestione_studenti.php">Studenti</a></li>
+                    <li><a href="report.php">Report</a></li>
                 <?php endif; ?>
+                
+                <?php if(!$isTeacher): ?>
+                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
+                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
+                    <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
+                    <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
+                <?php endif; ?>
+
                 <li><a href="../login/logout.php">Logout</a></li>
             </ul>
         </nav>
@@ -198,7 +211,6 @@ $current_date = date('Y-m-d');
     
     <main>
         <section>
-            <h1>La tua disponibilità</h1>
             <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
             
             <div class="availability-section">

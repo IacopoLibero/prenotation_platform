@@ -87,15 +87,25 @@ $month_names = [
 <body>
     <header>
         <nav>
-            <div class="logo">Programma Lezioni</div>
+            <div class="logo">Report Lezioni</div>
             <ul>
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
-                <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                <li><a href="disponibilita.php">Disponibilità</a></li>
-                <li><a href="prenotazioni.php">Prenotazioni</a></li>
-                <li><a href="gestione_studenti.php">Studenti</a></li>
-                <li><a href="report.php">Report</a></li>
+                <?php if($isTeacher): ?>
+                    <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
+                    <li><a href="disponibilita.php">Disponibilità</a></li>
+                    <li><a href="prenotazioni.php">Prenotazioni</a></li>
+                    <li><a href="gestione_studenti.php">Studenti</a></li>
+                    <li><a href="report.php">Report</a></li>
+                <?php endif; ?>
+                
+                <?php if(!$isTeacher): ?>
+                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
+                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
+                    <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
+                    <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
+                <?php endif; ?>
+
                 <li><a href="../login/logout.php">Logout</a></li>
             </ul>
         </nav>
@@ -103,9 +113,7 @@ $month_names = [
     
     <main>
         <section>
-            <h1>Report Lezioni</h1>
-            <p>Panoramica delle tue attività di insegnamento</p>
-            
+            <br>
             <div class="report-container">
                 <div class="stat-cards">
                     <div class="stat-card">
