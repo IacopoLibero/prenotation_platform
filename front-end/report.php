@@ -56,7 +56,7 @@ $students = $result_students->fetch_assoc();
 $query_monthly = "SELECT 
                     YEAR(start_time) as year,
                     MONTH(start_time) as month, 
-                    COUNT(*) as lesson_count,
+                    SUM(CASE WHEN stato IN ('prenotata', 'completata') THEN 1 ELSE 0 END) as lesson_count,
                     SUM(CASE WHEN stato = 'completata' THEN 1 ELSE 0 END) as completed_count
                   FROM Lezioni 
                   WHERE teacher_email = ? 
