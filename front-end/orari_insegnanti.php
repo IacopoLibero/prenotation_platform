@@ -4,7 +4,7 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'studente'){
     header('Location: ../index.php');
     exit;
 }
-
+$isTeacher = ($_SESSION['tipo'] === 'professore');
 require_once '../connessione.php';
 
 // Ottieni tutti gli insegnanti
@@ -30,17 +30,9 @@ $result = $stmt->get_result();
             <ul>
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
-                <?php if($isTeacher): ?>
-                    <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                    <li><a href="disponibilita.php">Disponibilità</a></li>
-                    <li><a href="prenotazioni.php">Prenotazioni</a></li>
-                    <li><a href="gestione_studenti.php">Studenti</a></li>
-                    <li><a href="report.php">Report</a></li>
-                <?php endif; ?>
                 
                 <?php if(!$isTeacher): ?>
                     <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
-                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
                     <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
                     <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
                 <?php endif; ?>

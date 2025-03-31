@@ -56,7 +56,6 @@
         <nav>
             <div class="logo">Home</div>
             <ul>
-                <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
                 <?php if($isTeacher): ?>
                     <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>

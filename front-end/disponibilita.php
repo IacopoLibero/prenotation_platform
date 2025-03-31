@@ -9,7 +9,7 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
     header('Location: ../index.php');
     exit;
 }
-
+$isTeacher = ($_SESSION['tipo'] === 'professore');
 require_once '../connessione.php';
 
 // Get availability by joining both tables 
@@ -187,7 +187,6 @@ $current_date = date('Y-m-d');
                 <li><a href="home.php">Home</a></li>
                 <li><a href="user_account.php">Account</a></li>
                 <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
-                <li><a href="disponibilita.php?refresh=<?php echo time(); ?>">Disponibilità</a></li>
                 <?php if($has_google_calendar): ?>
                     <li><a href="google_calendar_setup.php">Google Calendar</a></li>
                 <?php endif; ?>

@@ -4,7 +4,7 @@ if(!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore'){
     header('Location: ../index.php');
     exit;
 }
-
+$isTeacher = ($_SESSION['tipo'] === 'professore');
 require_once '../connessione.php';
 
 // Ottieni gli studenti che hanno prenotato lezioni con questo professore
@@ -44,15 +44,7 @@ $result = $stmt->get_result();
                     <li><a href="gestione_lezioni.php">Gestisci Lezioni</a></li>
                     <li><a href="disponibilita.php">Disponibilità</a></li>
                     <li><a href="prenotazioni.php">Prenotazioni</a></li>
-                    <li><a href="gestione_studenti.php">Studenti</a></li>
                     <li><a href="report.php">Report</a></li>
-                <?php endif; ?>
-                
-                <?php if(!$isTeacher): ?>
-                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
-                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
-                    <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
-                    <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
                 <?php endif; ?>
 
                 <li><a href="../login/logout.php">Logout</a></li>
