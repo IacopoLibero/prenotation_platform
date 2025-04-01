@@ -54,6 +54,19 @@ $result = $stmt->get_result();
         <section>
             <p>Gestisci le prenotazioni effettuate dagli studenti</p>
             
+            <!-- Ad container with proper styling -->
+            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+                <script>
+                    !function(d,l,e,s,c){
+                        e=d.createElement("script");
+                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                        s=d.scripts;
+                        c=d.currentScript||s[s.length-1];
+                        c.parentNode.insertBefore(e,c)
+                    }(document,location)
+                </script>
+            </div>
+            
             <div class="filter-container">
                 <button class="filter-btn active" data-filter="all">Tutte</button>
                 <button class="filter-btn" data-filter="prenotata">Prenotate</button>
@@ -100,6 +113,5 @@ $result = $stmt->get_result();
     </footer>
 
     <script src="../js/prenotazioni.js?v=<?php echo time(); ?>"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

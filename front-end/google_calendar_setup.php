@@ -59,6 +59,19 @@ $calendar_link = $row['google_calendar_link'] ?? '';
         <section>
             <p>Collega il tuo Google Calendar per gestire automaticamente la tua disponibilità</p>
             
+            <!-- Ad container with proper styling -->
+            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+                <script>
+                    !function(d,l,e,s,c){
+                        e=d.createElement("script");
+                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                        s=d.scripts;
+                        c=d.currentScript||s[s.length-1];
+                        c.parentNode.insertBefore(e,c)
+                    }(document,location)
+                </script>
+            </div>
+            
             <div class="calendar-section">
                 <div class="form-container">
                     <h2 class="form-title">Collega il tuo calendario Google</h2>
@@ -154,6 +167,5 @@ $calendar_link = $row['google_calendar_link'] ?? '';
     </footer>
     
     <script src="../js/google_calendar_setup.js?v=<?php echo time(); ?>"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

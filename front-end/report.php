@@ -122,6 +122,19 @@ $month_names = [
                     </div>
                 </div>
                 
+                <!-- Ad container with proper styling -->
+                <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+                    <script>
+                        !function(d,l,e,s,c){
+                            e=d.createElement("script");
+                            e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                            s=d.scripts;
+                            c=d.currentScript||s[s.length-1];
+                            c.parentNode.insertBefore(e,c)
+                        }(document,location)
+                    </script>
+                </div>
+                
                 <div class="chart-container">
                     <h2 class="chart-title">Ore di Lezione</h2>
                     <div class="stat-cards">
@@ -175,6 +188,5 @@ $month_names = [
     </footer>
 
     <script src="../js/report.js?v=<?php echo time(); ?>"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

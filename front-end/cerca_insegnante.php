@@ -39,6 +39,19 @@ $isTeacher = ($_SESSION['tipo'] === 'professore');
         <section>
             <p>Trova insegnanti per nome, email o materia</p>
             
+            <!-- Ad container with proper styling -->
+            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+                <script>
+                    !function(d,l,e,s,c){
+                        e=d.createElement("script");
+                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                        s=d.scripts;
+                        c=d.currentScript||s[s.length-1];
+                        c.parentNode.insertBefore(e,c)
+                    }(document,location)
+                </script>
+            </div>
+            
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" id="searchInput" class="search-input" placeholder="Cerca per nome, email o materia...">
@@ -55,6 +68,5 @@ $isTeacher = ($_SESSION['tipo'] === 'professore');
     </footer>
     
     <script src="../js/cerca_insegnante.js"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

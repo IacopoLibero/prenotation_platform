@@ -53,6 +53,19 @@ $result = $stmt->get_result();
         <section>
             <p>Crea, modifica e gestisci le tue lezioni</p>
             
+            <!-- Ad container with proper styling -->
+            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+                <script>
+                    !function(d,l,e,s,c){
+                        e=d.createElement("script");
+                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                        s=d.scripts;
+                        c=d.currentScript||s[s.length-1];
+                        c.parentNode.insertBefore(e,c)
+                    }(document,location)
+                </script>
+            </div>
+            
             <div class="action-buttons">
                 <button id="createLessonBtn" class="btn-create">Crea Nuova Lezione</button>
             </div>
@@ -152,6 +165,5 @@ $result = $stmt->get_result();
     </footer>
     
     <script src="../js/gestione_lezioni.js?v=<?php echo time(); ?>"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

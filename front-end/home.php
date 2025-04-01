@@ -93,6 +93,19 @@
             <p class="user-type">Sei connesso come: <span class="badge <?php echo $isTeacher ? 'teacher' : 'student'; ?>"><?php echo $isTeacher ? 'Professore' : 'Studente'; ?></span></p>
         </section>
         
+        <!-- Ad container with proper styling -->
+        <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+            <script>
+                !function(d,l,e,s,c){
+                    e=d.createElement("script");
+                    e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                    s=d.scripts;
+                    c=d.currentScript||s[s.length-1];
+                    c.parentNode.insertBefore(e,c)
+                }(document,location)
+            </script>
+        </div>
+        
         <section class="dashboard">
             <h2>Dashboard</h2>
             
@@ -166,6 +179,18 @@
     
     <!-- Add JavaScript fix -->
     <script src="../js/fix-quick-help.js"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
+    
+    <!-- Ad container with proper styling -->
+    <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
+        <script>
+            !function(d,l,e,s,c){
+                e=d.createElement("script");
+                e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
+                s=d.scripts;
+                c=d.currentScript||s[s.length-1];
+                c.parentNode.insertBefore(e,c)
+            }(document,location)
+        </script>
+    </div>
 </body>
 </html>
