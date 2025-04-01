@@ -142,7 +142,12 @@ function renderWeek(weekNumber) {
     // Get the date range for this week
     const today = new Date();
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() + (weekNumber * 7));
+    
+    // Calcola il primo giorno della settimana (lunedì)
+    const dayOfWeek = today.getDay(); // 0 = domenica, 1 = lunedì, ..., 6 = sabato
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Aggiusta per iniziare da lunedì
+    
+    weekStart.setDate(diff + (weekNumber * 7));
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     
@@ -183,36 +188,72 @@ function renderWeek(weekNumber) {
         <div class="availability-container">
     `;
     
-    // Order days correctly (Monday to Sunday)
-    const orderedDays = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
+    // Crea un array con tutti i giorni della settimana corrente
+    const daysInWeek = [];
+    const dayMapping = {
+        1: 'lunedi',
+        2: 'martedi',
+        3: 'mercoledi',
+        4: 'giovedi',
+        5: 'venerdi',
+        6: 'sabato',
+        0: 'domenica'
+    };
     
-    for (const day of orderedDays) {
-        const slots = weekData[day] || [];
-        if (slots.length === 0) continue;
+    // Genera tutti i giorni della settimana corrente
+    for (let i = 0; i < 7; i++) {
+        const day = new Date(weekStart);
+        day.setDate(weekStart.getDate() + i);
         
-        // Sort slots by time
-        slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+        const dayNum = day.getDay(); // 0-6
+        const dayName = dayMapping[dayNum];
+        const formattedDate = day.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
+        daysInWeek.push({
+            date: day,
+            dayName: dayName,
+            formattedDate: formattedDate
+        });
+    }
+    
+    // Ordina i giorni in modo che inizino da lunedì
+    daysInWeek.sort((a, b) => {
+        const order = { 'lunedi': 1, 'martedi': 2, 'mercoledi': 3, 'giovedi': 4, 'venerdi': 5, 'sabato': 6, 'domenica': 7 };
+        return order[a.dayName] - order[b.dayName];
+    });
+    
+    // Visualizza ogni giorno della settimana
+    for (const dayInfo of daysInWeek) {
+        const slots = weekData[dayInfo.dayName] || [];
+        
+        // Crea una card per ogni giorno, anche se non ci sono slot
         html += `
             <div class="day-card">
                 <h3 class="day-header">
-                    ${dayNames[day]}
-                    <span class="date-badge">${slots[0].data_formattata}</span>
+                    ${dayNames[dayInfo.dayName]}
+                    <span class="date-badge">${dayInfo.formattedDate}</span>
                 </h3>
         `;
         
-        slots.forEach(slot => {
-            const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
-                               slot.stato === 'prenotata' ? 'status-booked' : 
-                               slot.stato === 'completata' ? 'status-completed' : '';
+        if (slots.length === 0) {
+            html += `<div class="empty-day">Nessuna disponibilità</div>`;
+        } else {
+            // Sort slots by time
+            slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
             
-            html += `
-                <div class="time-slot">
-                    <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                    <span class="slot-status ${statusClass}">${slot.stato}</span>
-                </div>
-            `;
-        });
+            slots.forEach(slot => {
+                const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
+                                   slot.stato === 'prenotata' ? 'status-booked' : 
+                                   slot.stato === 'completata' ? 'status-completed' : '';
+                
+                html += `
+                    <div class="time-slot">
+                        <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                        <span class="slot-status ${statusClass}">${slot.stato}</span>
+                    </div>
+                `;
+            });
+        }
         
         html += `</div>`;
     }
