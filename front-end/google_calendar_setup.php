@@ -154,5 +154,6 @@ $calendar_link = $row['google_calendar_link'] ?? '';
     </footer>
     
     <script src="../js/google_calendar_setup.js?v=<?php echo time(); ?>"></script>
+    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

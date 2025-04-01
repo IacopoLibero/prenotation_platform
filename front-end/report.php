@@ -175,5 +175,6 @@ $month_names = [
     </footer>
 
     <script src="../js/report.js?v=<?php echo time(); ?>"></script>
+    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>
