@@ -50,6 +50,16 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Home</title>
+    <script type="text/javascript">
+      var _iub = _iub || [];
+      _iub.csConfiguration = {"askConsentAtCookiePolicyUpdate":true,"countryDetection":true,"enableFadp":true,"enableLgpd":true,"enableTcf":true,"enableUspr":true,"floatingPreferencesButtonDisplay":"anchored-bottom-right","googleAdditionalConsentMode":true,"lgpdAppliesGlobally":false,"perPurposeConsent":true,"preferenceCookie":{"expireAfter":180},"siteId":3962138,"storage":{"useSiteId":true},"tcfPurposes":{"2":"consent_only","7":"consent_only","8":"consent_only","9":"consent_only","10":"consent_only","11":"consent_only"},"usPreferencesWidgetDisplay":"bottom-left","whitelabel":false,"cookiePolicyId":56978183,"lang":"it","floatingPreferencesButtonCaption":true,"banner":{"acceptButtonCaptionColor":"#FFFFFF","acceptButtonColor":"#0073CE","acceptButtonDisplay":true,"backgroundColor":"#FFFFFF","closeButtonDisplay":false,"customizeButtonCaptionColor":"#4D4D4D","customizeButtonColor":"#DADADA","customizeButtonDisplay":true,"explicitWithdrawal":true,"listPurposes":true,"ownerName":"superipetizioni.altervista.org","position":"float-bottom-center","rejectButtonCaptionColor":"#FFFFFF","rejectButtonColor":"#0073CE","rejectButtonDisplay":true,"showPurposesToggles":true,"showTotalNumberOfProviders":true,"textColor":"#000000"}};
+      </script>
+      <script type="text/javascript" src="https://cs.iubenda.com/autoblocking/3962138.js"></script>
+      <script type="text/javascript" src="//cdn.iubenda.com/cs/tcf/stub-v2.js"></script>
+      <script type="text/javascript" src="//cdn.iubenda.com/cs/tcf/safe-tcf-v2.js"></script>
+      <script type="text/javascript" src="//cdn.iubenda.com/cs/gpp/stub.js"></script>
+      <script type="text/javascript" src="//cdn.iubenda.com/cs/iubenda_cs.js" charset="UTF-8" async>
+    </script>
 </head>
 <body>
     <header>
