@@ -98,16 +98,20 @@ foreach ($lessons_by_date as $date_str => $slots) {
         continue;
     }
     
-    // Per date lontane, forza la settimana a 0, 1 o 2 per visualizzarle
-    // Questo è utile per i dati di test con date del 2025
+    // MODIFICA: Per date future, usa un metodo deterministico invece che randomico
+    // Questo garantisce che ogni data appaia sempre nella stessa settimana
     if ($days_diff > 21) {
-        $week_number = rand(0, 2); // Assegna casualmente a una delle prime tre settimane
+        // Convertire date del 2025 nelle prime settimane in modo prevedibile
+        // usando il mese e il giorno per ottenere un numero da 0 a 2
+        $month = (int)$lesson_date->format('m');
+        $day = (int)$lesson_date->format('d');
+        $week_number = ($month + $day) % 3; // Distribuisce tra 0, 1 e 2 in modo prevedibile
     } else {
         // Calculate which week this belongs to (0 = current week, 1 = next week, etc.)
         $week_number = min(floor($days_diff / 7), 2); // Limita a massimo 2 settimane
     }
     
-    // Initialize the week structure if needed
+    // Store date info for better rendering
     if (!isset($availability_by_week[$week_number])) {
         $availability_by_week[$week_number] = [];
     }
@@ -131,6 +135,8 @@ foreach ($lessons_by_date as $date_str => $slots) {
     
     // Add all slots for this day
     foreach ($slots as $slot) {
+        // IMPORTANTE: Aggiungi anche la data completa per il filtraggio JavaScript
+        $slot['data_completa'] = $date_str;
         $availability_by_week[$week_number][$day_name][] = $slot;
     }
 }

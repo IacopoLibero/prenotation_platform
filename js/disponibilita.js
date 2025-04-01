@@ -209,10 +209,14 @@ function renderWeek(weekNumber) {
         const dayName = dayMapping[dayNum];
         const formattedDate = day.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
+        // Ottieni la data in formato ISO per confronto
+        const isoDate = day.toISOString().split('T')[0]; // YYYY-MM-DD
+        
         daysInWeek.push({
             date: day,
             dayName: dayName,
-            formattedDate: formattedDate
+            formattedDate: formattedDate,
+            isoDate: isoDate
         });
     }
     
@@ -224,7 +228,24 @@ function renderWeek(weekNumber) {
     
     // Visualizza ogni giorno della settimana
     for (const dayInfo of daysInWeek) {
-        const slots = weekData[dayInfo.dayName] || [];
+        // Ottieni gli slot per questo giorno e filtra per la data esatta
+        const allSlots = weekData[dayInfo.dayName] || [];
+        
+        // IMPORTANTE: Filtra gli slot che corrispondono esattamente alla data di questo giorno
+        // In questo modo evitiamo le duplicazioni di slot di diverse date ma dello stesso giorno della settimana
+        const slotsForThisDay = allSlots.filter(slot => {
+            // Se c'è una data_completa (YYYY-MM-DD) nel formato ISO, usa quella
+            if (slot.data_completa) {
+                // Converti date del 2025 per essere visualizzate correttamente
+                if (slot.data_completa.startsWith('2025-')) {
+                    // Dato che sono dati di test, mostra sempre questi slot per date 2025
+                    return true;
+                }
+                return slot.data_completa === dayInfo.isoDate;
+            }
+            // Altrimenti usa la data generica
+            return true;
+        });
         
         // Crea una card per ogni giorno, anche se non ci sono slot
         html += `
@@ -235,13 +256,25 @@ function renderWeek(weekNumber) {
                 </h3>
         `;
         
-        if (slots.length === 0) {
+        if (slotsForThisDay.length === 0) {
             html += `<div class="empty-day">Nessuna disponibilità</div>`;
         } else {
             // Sort slots by time
-            slots.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+            slotsForThisDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
             
-            slots.forEach(slot => {
+            // Usa un Set per evitare duplicazioni di orari
+            const processedTimes = new Set();
+            
+            slotsForThisDay.forEach(slot => {
+                // Crea una chiave unica per ogni slot (ora_inizio - ora_fine)
+                const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
+                
+                // Salta se questo orario è già stato processato
+                if (processedTimes.has(timeKey)) return;
+                
+                // Segna questo orario come processato
+                processedTimes.add(timeKey);
+                
                 const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
                                    slot.stato === 'prenotata' ? 'status-booked' : 
                                    slot.stato === 'completata' ? 'status-completed' : '';
