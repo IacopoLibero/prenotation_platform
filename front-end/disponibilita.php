@@ -280,23 +280,12 @@ $current_date = date('Y-m-d');
     <script>
         // Initialize JavaScript with PHP data
         document.addEventListener('DOMContentLoaded', function() {
-            // Stampa i dati disponibilità sulla console per debug
-            console.log('Availability data:', <?php echo json_encode($availability_by_week); ?>);
-            
             // Pass PHP data to JavaScript
             initAvailability(
                 <?php echo json_encode($availability_by_week); ?>,
                 <?php echo json_encode($day_translations); ?>,
                 <?php echo max(1, count($availability_by_week)); ?> // Assicura che sia almeno 1
             );
-            
-            // Aggiungi listener per il pulsante di sync vuoto
-            const syncBtnEmpty = document.getElementById('syncBtnEmpty');
-            if (syncBtnEmpty) {
-                syncBtnEmpty.addEventListener('click', function() {
-                    syncGoogleCalendar();
-                });
-            }
         });
     </script>
 </body>

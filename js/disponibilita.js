@@ -16,6 +16,15 @@ function initAvailability(data, days, weeks) {
     availabilityData = data;
     dayNames = days;
     maxWeeks = weeks;
+    
+    // Stampa i dati disponibilità sulla console per debug
+    console.log('Availability data:', data);
+    
+    // Renderizza immediatamente la prima settimana
+    setTimeout(() => {
+        renderWeek(0);
+        renderPaginationControls();
+    }, 100);
 }
 
 // Sincronizzazione Google Calendar
@@ -130,46 +139,29 @@ function renderWeek(weekNumber) {
     if (!container) return;
     
     const weekData = availabilityData[weekNumber] || {};
+    console.log('Rendering week:', weekNumber, 'Data:', weekData);
     
     // Get the date range for this week
-    let weekStart, weekEnd;
-    let foundDates = false;
-    
-    // Find first and last date in this week's data
-    for (const day in weekData) {
-        if (weekData[day].length > 0) {
-            for (const slot of weekData[day]) {
-                const date = new Date(slot.data);
-                if (!weekStart || date < weekStart) {
-                    weekStart = date;
-                }
-                if (!weekEnd || date > weekEnd) {
-                    weekEnd = date;
-                }
-                foundDates = true;
-            }
-        }
-    }
-    
-    // Default dates if no slots found
-    if (!foundDates) {
-        const today = new Date();
-        weekStart = new Date();
-        weekStart.setDate(today.getDate() + (weekNumber * 7));
-        weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-    }
+    const today = new Date();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() + (weekNumber * 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
     
     const weekDateRange = `${weekStart.toLocaleDateString('it-IT')} - ${weekEnd.toLocaleDateString('it-IT')}`;
     
     // Check if there are any slots for this week
     let hasSlots = false;
+    let totalSlots = 0;
+    
     for (const day in weekData) {
-        if (weekData[day].length > 0) {
+        if (weekData[day] && weekData[day].length > 0) {
             hasSlots = true;
-            break;
+            totalSlots += weekData[day].length;
         }
     }
+    
+    console.log('Has slots:', hasSlots, 'Total slots:', totalSlots);
     
     if (!hasSlots) {
         container.innerHTML = `
@@ -212,9 +204,14 @@ function renderWeek(weekNumber) {
         `;
         
         slots.forEach(slot => {
+            const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
+                               slot.stato === 'prenotata' ? 'status-booked' : 
+                               slot.stato === 'completata' ? 'status-completed' : '';
+            
             html += `
                 <div class="time-slot">
                     <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                    <span class="slot-status ${statusClass}">${slot.stato}</span>
                 </div>
             `;
         });
