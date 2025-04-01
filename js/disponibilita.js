@@ -236,18 +236,19 @@ function renderWeek(weekNumber) {
         const slotsForThisDay = allSlots.filter(slot => {
             // Se c'è una data_completa (YYYY-MM-DD) nel formato ISO, usa quella
             if (slot.data_completa) {
-                // Converti date del 2025 per essere visualizzate correttamente
-                if (slot.data_completa.startsWith('2025-')) {
-                    // Dato che sono dati di test, mostra sempre questi slot per date 2025
-                    return true;
-                }
-                return slot.data_completa === dayInfo.isoDate;
+                // Anche per date 2025, verifica che la data corrisponda esattamente
+                return slot.data_completa === dayInfo.isoDate || 
+                       // Per compatibilità, usiamo anche il campo 'data' se disponibile
+                       (slot.data && slot.data === dayInfo.isoDate);
             }
-            // Altrimenti usa la data generica
-            return true;
+            // Altrimenti usa la data dal campo standard
+            return slot.data === dayInfo.isoDate;
         });
         
-        // Crea una card per ogni giorno, anche se non ci sono slot
+        // Salta completamente questo giorno se non ci sono slot
+        if (slotsForThisDay.length === 0) continue;
+        
+        // Crea una card per il giorno solo se ci sono slot disponibili
         html += `
             <div class="day-card">
                 <h3 class="day-header">
@@ -256,37 +257,33 @@ function renderWeek(weekNumber) {
                 </h3>
         `;
         
-        if (slotsForThisDay.length === 0) {
-            html += `<div class="empty-day">Nessuna disponibilità</div>`;
-        } else {
-            // Sort slots by time
-            slotsForThisDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+        // Sort slots by time
+        slotsForThisDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+        
+        // Usa un Set per evitare duplicazioni di orari
+        const processedTimes = new Set();
+        
+        slotsForThisDay.forEach(slot => {
+            // Crea una chiave unica per ogni slot (ora_inizio - ora_fine)
+            const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
             
-            // Usa un Set per evitare duplicazioni di orari
-            const processedTimes = new Set();
+            // Salta se questo orario è già stato processato
+            if (processedTimes.has(timeKey)) return;
             
-            slotsForThisDay.forEach(slot => {
-                // Crea una chiave unica per ogni slot (ora_inizio - ora_fine)
-                const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
-                
-                // Salta se questo orario è già stato processato
-                if (processedTimes.has(timeKey)) return;
-                
-                // Segna questo orario come processato
-                processedTimes.add(timeKey);
-                
-                const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
-                                   slot.stato === 'prenotata' ? 'status-booked' : 
-                                   slot.stato === 'completata' ? 'status-completed' : '';
-                
-                html += `
-                    <div class="time-slot">
-                        <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                        <span class="slot-status ${statusClass}">${slot.stato}</span>
-                    </div>
-                `;
-            });
-        }
+            // Segna questo orario come processato
+            processedTimes.add(timeKey);
+            
+            const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
+                               slot.stato === 'prenotata' ? 'status-booked' : 
+                               slot.stato === 'completata' ? 'status-completed' : '';
+            
+            html += `
+                <div class="time-slot">
+                    <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                    <span class="slot-status ${statusClass}">${slot.stato}</span>
+                </div>
+            `;
+        });
         
         html += `</div>`;
     }
