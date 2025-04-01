@@ -20,11 +20,9 @@ function initAvailability(data, days, weeks) {
     // Stampa i dati disponibilità sulla console per debug
     console.log('Availability data:', data);
     
-    // Renderizza immediatamente la prima settimana
-    setTimeout(() => {
-        renderWeek(0);
-        renderPaginationControls();
-    }, 100);
+    // Renderizza la prima settimana
+    renderWeek(0);
+    renderPaginationControls();
 }
 
 // Sincronizzazione Google Calendar
@@ -223,7 +221,7 @@ function renderWeek(weekNumber) {
     container.innerHTML = html;
 }
 
-// Register event listeners when DOM is loaded
+// Register event listeners when DOM is loaded - solo un event listener
 document.addEventListener('DOMContentLoaded', function() {
     // Listener per i pulsanti di sincronizzazione
     const syncBtn = document.getElementById('syncBtn');
