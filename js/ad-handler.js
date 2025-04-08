@@ -4,6 +4,22 @@
  */
 
 (function() {
+    // Create a stub for TCF API if missing
+    if (typeof window.__tcfapi !== 'function') {
+        window.__tcfapi = function(command, version, callback) {
+            // Stub implementation to prevent errors
+            if (callback && typeof callback === 'function') {
+                callback({ 
+                    eventStatus: 'tcloaded', 
+                    gdprApplies: false, 
+                    purposeConsents: {},
+                    vendor: { consents: {} },
+                    success: true 
+                });
+            }
+        };
+    }
+    
     // Safe ad loader function with error handling
     window.loadAd = function(containerId) {
         // Find the ad container

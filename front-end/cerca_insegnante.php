@@ -27,7 +27,6 @@ $isTeacher = ($_SESSION['tipo'] === 'professore');
                 <li><a href="user_account.php">Account</a></li>
                 
                 <?php if(!$isTeacher): ?>
-                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                     <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
                     <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
                 <?php endif; ?>

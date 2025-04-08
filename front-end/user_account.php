@@ -10,7 +10,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device="width, initial-scale=1.0">
     <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/profile.css">
     <title>Account Utente</title>
@@ -32,7 +32,6 @@
                 <?php endif; ?>
                 
                 <?php if(!$isTeacher): ?>
-                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                     <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
                     <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
                     <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
@@ -124,11 +123,6 @@
         <section class="student-features">
             <h2>Strumenti Studente</h2>
             <div class="features-grid">
-                <div class="feature-card">
-                    <h3>Prenota Lezioni</h3>
-                    <p>Visualizza e prenota le lezioni disponibili</p>
-                    <a href="prenota_lezioni.php" class="btn-feature">Prenota</a>
-                </div>
                 <div class="feature-card">
                     <h3>Orari Insegnanti</h3>
                     <p>Visualizza gli orari disponibili degli insegnanti</p>

@@ -71,7 +71,6 @@
                     <li><a href="gestione_studenti.php">Studenti</a></li>
                     <li><a href="report.php">Report</a></li>
                 <?php else: ?>
-                    <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
                     <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
                     <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
                     <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
