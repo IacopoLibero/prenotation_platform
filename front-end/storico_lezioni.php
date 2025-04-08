@@ -58,10 +58,17 @@ $result = $stmt->get_result();
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>
             
+            <!-- Add filter buttons -->
+            <div class="filter-container">
+                <button class="filter-btn active" data-filter="all">Tutte</button>
+                <button class="filter-btn" data-filter="prenotata">Prenotate</button>
+                <button class="filter-btn" data-filter="completata">Completate</button>
+            </div>
+            
             <div class="lessons-container">
                 <?php if ($result->num_rows > 0): ?>
                     <?php while($row = $result->fetch_assoc()): ?>
-                        <div class="lesson-card">
+                        <div class="lesson-card" data-status="<?= $row['stato'] ?>">
                             <div class="lesson-header">
                                 <h3 class="lesson-title"><?= htmlspecialchars($row['titolo']) ?></h3>
                                 <span class="status <?= $row['stato'] ?>"><?= ucfirst($row['stato']) ?></span>

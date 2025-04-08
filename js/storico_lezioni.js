@@ -22,3 +22,28 @@ function cancelBooking(lessonId) {
         });
     }
 }
+
+// Filtro per stato lezione
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            // Rimuovi classe active da tutti i bottoni
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Aggiungi classe active al bottone cliccato
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            
+            document.querySelectorAll('.lesson-card').forEach(card => {
+                if (filter === 'all' || card.dataset.status === filter) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
