@@ -75,6 +75,8 @@ $completed_minutes = $stats['completed_minutes'] % 60;
     <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/student_details.css?v=<?php echo time(); ?>">
     <title>Dettagli Studente</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
 </head>
 <body>
     <header>
@@ -124,18 +126,8 @@ $completed_minutes = $stats['completed_minutes'] % 60;
                 </div>
             </div>
             
-            <!-- Ad container with proper styling -->
-            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-                <script>
-                    !function(d,l,e,s,c){
-                        e=d.createElement("script");
-                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                        s=d.scripts;
-                        c=d.currentScript||s[s.length-1];
-                        c.parentNode.insertBefore(e,c)
-                    }(document,location)
-                </script>
-            </div>
+            <!-- Include standardized ad container -->
+            <?php include_once('../includes/ad-container.php'); ?>
             
             <h2 class="lessons-title">Storico Lezioni</h2>
             

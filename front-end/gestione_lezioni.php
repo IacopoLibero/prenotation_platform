@@ -29,6 +29,8 @@ $result = $stmt->get_result();
     <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/gestione_lezioni.css?v=<?php echo time(); ?>">
     <title>Gestione Lezioni</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
 </head>
 <body>
     <header>
@@ -53,18 +55,8 @@ $result = $stmt->get_result();
         <section>
             <p>Crea, modifica e gestisci le tue lezioni</p>
             
-            <!-- Ad container with proper styling -->
-            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-                <script>
-                    !function(d,l,e,s,c){
-                        e=d.createElement("script");
-                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                        s=d.scripts;
-                        c=d.currentScript||s[s.length-1];
-                        c.parentNode.insertBefore(e,c)
-                    }(document,location)
-                </script>
-            </div>
+            <!-- Include standardized ad container -->
+            <?php include_once('../includes/ad-container.php'); ?>
             
             <div class="action-buttons">
                 <button id="createLessonBtn" class="btn-create">Crea Nuova Lezione</button>

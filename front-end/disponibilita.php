@@ -181,14 +181,11 @@ $current_date = date('Y-m-d');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Add cache-busting meta tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="../styles/home.css?v=<?php echo time(); ?>">
-    <!-- Add the new external stylesheet -->
+    <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/disponibilita.css?v=<?php echo time(); ?>">
     <title>Disponibilità</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
 </head>
 <body>
     <header>
@@ -213,18 +210,8 @@ $current_date = date('Y-m-d');
         <section>
             <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
             
-            <!-- Ad container with proper styling -->
-            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-                <script>
-                    !function(d,l,e,s,c){
-                        e=d.createElement("script");
-                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                        s=d.scripts;
-                        c=d.currentScript||s[s.length-1];
-                        c.parentNode.insertBefore(e,c)
-                    }(document,location)
-                </script>
-            </div>
+            <!-- Include standardized ad container -->
+            <?php include_once('../includes/ad-container.php'); ?>
             
             <div class="availability-section">
                 <?php if($has_google_calendar): ?>
@@ -307,6 +294,5 @@ $current_date = date('Y-m-d');
             );
         });
     </script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

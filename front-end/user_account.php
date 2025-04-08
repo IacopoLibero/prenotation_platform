@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/profile.css">
     <title>Account Utente</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
 </head>
 <body>
     <header>
@@ -48,18 +50,8 @@
             </div>
         </section>
         
-        <!-- Ad container with proper styling -->
-        <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-            <script>
-                !function(d,l,e,s,c){
-                    e=d.createElement("script");
-                    e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                    s=d.scripts;
-                    c=d.currentScript||s[s.length-1];
-                    c.parentNode.insertBefore(e,c)
-                }(document,location)
-            </script>
-        </div>
+        <!-- Include standardized ad container -->
+        <?php include_once('../includes/ad-container.php'); ?>
         
         <section class="account-info">
             <h2>Informazioni Personali</h2>
@@ -162,6 +154,5 @@
     
     <!-- Add reference to the JavaScript file with cache busting -->
     <script src="../js/user_account.js?v=<?php echo time(); ?>"></script>
-    <script>!function(d,l,e,s,c){e=d.createElement("script");e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();s=d.scripts;c=d.currentScript||s[s.length-1];c.parentNode.insertBefore(e,c)}(document,location)</script>
 </body>
 </html>

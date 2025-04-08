@@ -34,6 +34,8 @@ $calendar_link = $row['google_calendar_link'] ?? '';
     <link rel="stylesheet" href="../styles/home.css">
     <link rel="stylesheet" href="../styles/google_calendar_setup.css?v=<?php echo time(); ?>">
     <title>Configura Google Calendar</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
 </head>
 <body>
     <header>
@@ -59,18 +61,8 @@ $calendar_link = $row['google_calendar_link'] ?? '';
         <section>
             <p>Collega il tuo Google Calendar per gestire automaticamente la tua disponibilità</p>
             
-            <!-- Ad container with proper styling -->
-            <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-                <script>
-                    !function(d,l,e,s,c){
-                        e=d.createElement("script");
-                        e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                        s=d.scripts;
-                        c=d.currentScript||s[s.length-1];
-                        c.parentNode.insertBefore(e,c)
-                    }(document,location)
-                </script>
-            </div>
+            <!-- Include standardized ad container -->
+            <?php include_once('../includes/ad-container.php'); ?>
             
             <div class="calendar-section">
                 <div class="form-container">

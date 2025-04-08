@@ -39,17 +39,14 @@
     $completed_minutes = $stats['completed_minutes'] % 60;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Add cache-busting parameter to the CSS link -->
-    <link rel="stylesheet" href="../styles/home.css?v=<?php echo time(); ?>">
-    <!-- Add cache-control meta tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="../styles/home.css">
     <title>Home</title>
+    <!-- Include ad handler script -->
+    <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
     <script type="text/javascript">
       var _iub = _iub || [];
       _iub.csConfiguration = {"askConsentAtCookiePolicyUpdate":true,"countryDetection":true,"enableFadp":true,"enableLgpd":true,"enableTcf":true,"enableUspr":true,"floatingPreferencesButtonDisplay":"anchored-bottom-right","googleAdditionalConsentMode":true,"lgpdAppliesGlobally":false,"perPurposeConsent":true,"preferenceCookie":{"expireAfter":180},"siteId":3962138,"storage":{"useSiteId":true},"tcfPurposes":{"2":"consent_only","7":"consent_only","8":"consent_only","9":"consent_only","10":"consent_only","11":"consent_only"},"usPreferencesWidgetDisplay":"bottom-left","whitelabel":false,"cookiePolicyId":56978183,"lang":"it","floatingPreferencesButtonCaption":true,"banner":{"acceptButtonCaptionColor":"#FFFFFF","acceptButtonColor":"#0073CE","acceptButtonDisplay":true,"backgroundColor":"#FFFFFF","closeButtonDisplay":false,"customizeButtonCaptionColor":"#4D4D4D","customizeButtonColor":"#DADADA","customizeButtonDisplay":true,"explicitWithdrawal":true,"listPurposes":true,"ownerName":"superipetizioni.altervista.org","position":"float-bottom-center","rejectButtonCaptionColor":"#FFFFFF","rejectButtonColor":"#0073CE","rejectButtonDisplay":true,"showPurposesToggles":true,"showTotalNumberOfProviders":true,"textColor":"#000000"}};
@@ -73,13 +70,11 @@
                     <li><a href="prenotazioni.php">Prenotazioni</a></li>
                     <li><a href="gestione_studenti.php">Studenti</a></li>
                     <li><a href="report.php">Report</a></li>
-                <?php endif; ?>
-                
-                <?php if(!$isTeacher): ?>
+                <?php else: ?>
                     <li><a href="prenota_lezioni.php">Prenota Lezioni</a></li>
-                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
                     <li><a href="storico_lezioni.php">Storico Lezioni</a></li>
                     <li><a href="cerca_insegnante.php">Cerca Insegnante</a></li>
+                    <li><a href="orari_insegnanti.php">Orari Insegnanti</a></li>
                 <?php endif; ?>
 
                 <li><a href="../login/logout.php">Logout</a></li>
@@ -93,18 +88,8 @@
             <p class="user-type">Sei connesso come: <span class="badge <?php echo $isTeacher ? 'teacher' : 'student'; ?>"><?php echo $isTeacher ? 'Professore' : 'Studente'; ?></span></p>
         </section>
         
-        <!-- Ad container with proper styling -->
-        <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-            <script>
-                !function(d,l,e,s,c){
-                    e=d.createElement("script");
-                    e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                    s=d.scripts;
-                    c=d.currentScript||s[s.length-1];
-                    c.parentNode.insertBefore(e,c)
-                }(document,location)
-            </script>
-        </div>
+        <!-- Include standardized ad container -->
+        <?php include_once('../includes/ad-container.php'); ?>
         
         <section class="dashboard">
             <h2>Dashboard</h2>
@@ -179,18 +164,5 @@
     
     <!-- Add JavaScript fix -->
     <script src="../js/fix-quick-help.js"></script>
-    
-    <!-- Ad container with proper styling -->
-    <div class="ad-container" style="text-align: center; margin: 20px auto; max-width: 300px; min-height: 250px; overflow: hidden;">
-        <script>
-            !function(d,l,e,s,c){
-                e=d.createElement("script");
-                e.src="//ad.altervista.org/js.ad/size=300X250/?ref="+encodeURIComponent(l.hostname+l.pathname)+"&r="+Date.now();
-                s=d.scripts;
-                c=d.currentScript||s[s.length-1];
-                c.parentNode.insertBefore(e,c)
-            }(document,location)
-        </script>
-    </div>
 </body>
 </html>
