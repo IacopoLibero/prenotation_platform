@@ -228,27 +228,45 @@ function renderWeek(weekNumber) {
     
     // Visualizza ogni giorno della settimana
     for (const dayInfo of daysInWeek) {
-        // Ottieni gli slot per questo giorno e filtra per la data esatta
+        // Ottieni gli slot per questo giorno
         const allSlots = weekData[dayInfo.dayName] || [];
         
-        // IMPORTANTE: Filtra gli slot che corrispondono esattamente alla data di questo giorno
-        // In questo modo evitiamo le duplicazioni di slot di diverse date ma dello stesso giorno della settimana
-        const slotsForThisDay = allSlots.filter(slot => {
-            // Se c'è una data_completa (YYYY-MM-DD) nel formato ISO, usa quella
-            if (slot.data_completa) {
-                // Anche per date 2025, verifica che la data corrisponda esattamente
-                return slot.data_completa === dayInfo.isoDate || 
-                       // Per compatibilità, usiamo anche il campo 'data' se disponibile
-                       (slot.data && slot.data === dayInfo.isoDate);
-            }
-            // Altrimenti usa la data dal campo standard
-            return slot.data === dayInfo.isoDate;
-        });
+        // Modifica: Ora visualizziamo tutti gli slot per il giorno della settimana,
+        // non filtriamo più per data esatta se è in una settimana futura
+        let slotsForThisDay;
         
-        // Salta completamente questo giorno se non ci sono slot
+        // Per la settimana corrente, filtra per data esatta
+        if (weekNumber === 0) {
+            slotsForThisDay = allSlots.filter(slot => {
+                // Verifica la corrispondenza con la data esatta di questa settimana
+                if (slot.data_completa) {
+                    return slot.data_completa === dayInfo.isoDate;
+                }
+                return slot.data === dayInfo.isoDate;
+            });
+        } else {
+            // Per le settimane future, mostra tutti gli slot di quel giorno della settimana
+            // ma raggruppiamo per ora per evitare duplicazioni
+            const slotsByTime = {};
+            
+            allSlots.forEach(slot => {
+                const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
+                // Se non abbiamo ancora incontrato questo orario, o abbiamo un orario con la data corrispondente,
+                // lo aggiungiamo/aggiorniamo
+                if (!slotsByTime[timeKey] || 
+                    (slot.data_completa && slot.data_completa === dayInfo.isoDate) ||
+                    (slot.data && slot.data === dayInfo.isoDate)) {
+                    slotsByTime[timeKey] = slot;
+                }
+            });
+            
+            slotsForThisDay = Object.values(slotsByTime);
+        }
+        
+        // Salta questo giorno se non ci sono slot disponibili
         if (slotsForThisDay.length === 0) continue;
         
-        // Crea una card per il giorno solo se ci sono slot disponibili
+        // Crea una card per il giorno
         html += `
             <div class="day-card">
                 <h3 class="day-header">
@@ -274,8 +292,8 @@ function renderWeek(weekNumber) {
             processedTimes.add(timeKey);
             
             const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
-                               slot.stato === 'prenotata' ? 'status-booked' : 
-                               slot.stato === 'completata' ? 'status-completed' : '';
+                              slot.stato === 'prenotata' ? 'status-booked' : 
+                              slot.stato === 'completata' ? 'status-completed' : '';
             
             html += `
                 <div class="time-slot">
