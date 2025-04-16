@@ -226,47 +226,55 @@ function renderWeek(weekNumber) {
         return order[a.dayName] - order[b.dayName];
     });
     
+    // Get today's date without time for comparison
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    
+    // Get today's day of week (0-6)
+    const currentDayOfWeek = currentDate.getDay(); // 0 = domenica, 1 = lunedì, ..., 6 = sabato
+    
     // Visualizza ogni giorno della settimana
     for (const dayInfo of daysInWeek) {
+        // Per la settimana corrente, mostra solo i giorni da domani in poi
+        // Per le settimane future, mostra solo da lunedì a venerdì
+        const dayDate = new Date(dayInfo.date);
+        dayDate.setHours(0, 0, 0, 0);
+        
+        // Controlla se questo è un giorno che dovremmo mostrare
+        // Regola 1: Per settimana corrente, mostra solo dal giorno dopo oggi
+        // Regola 2: Per tutte le settimane, mostra solo da lunedì a venerdì (1-5)
+        const dayNum = dayDate.getDay(); // 0-6
+        const shouldDisplay = (
+            // Per settimana corrente (0)
+            (weekNumber === 0 && dayDate > currentDate) ||
+            // Per settimane future, solo da lunedì a venerdì
+            (weekNumber > 0 && dayNum >= 1 && dayNum <= 5)
+        );
+        
+        // Se non dobbiamo mostrare questo giorno, salta
+        if (!shouldDisplay) continue;
+        
         // Ottieni gli slot per questo giorno della settimana
         const allSlots = weekData[dayInfo.dayName] || [];
         
         if (allSlots.length === 0) continue; // Salta se non ci sono slot per questo giorno della settimana
         
-        // Funzione per controllare se abbiamo slot per questa data specifica o per il giorno della settimana generico
-        const hasSlotsForDate = (slots, dateString) => {
-            return slots.some(slot => {
-                // Se lo slot ha una data_completa, controlla che corrisponda alla data corrente
-                if (slot.data_completa) {
-                    return slot.data_completa === dateString;
-                }
-                // Se lo slot ha una data, controlla che corrisponda alla data corrente
-                if (slot.data) {
-                    return slot.data === dateString;
-                }
-                // Se lo slot non ha una data specifica, mostriamo comunque gli slot per questa settimana
-                return weekNumber === 0 || weekNumber === 1;
-            });
-        };
-        
-        // Controlla se abbiamo almeno uno slot per questa data
-        if (!hasSlotsForDate(allSlots, dayInfo.isoDate)) continue;
-        
-        // Filtra gli slot per questa data specifica o per il giorno della settimana generico
+        // Filtra gli slot per questa data specifica
         let slotsForThisDay = allSlots.filter(slot => {
-            // Se lo slot ha una data specifica ma non corrisponde alla data corrente, escludilo
-            if (slot.data_completa && slot.data_completa !== dayInfo.isoDate) {
-                return false;
-            }
-            if (slot.data && slot.data !== dayInfo.isoDate) {
-                return false;
+            // Se lo slot ha una data specifica che corrisponde alla data corrente
+            if (slot.data_completa === dayInfo.isoDate || slot.data === dayInfo.isoDate) {
+                return true;
             }
             
-            // Includi lo slot se non ha una data specifica o se corrisponde alla data corrente
-            return true;
+            // Per le settimane future, accetta anche se non ha data specifica
+            if (weekNumber > 0 && !slot.data_completa && !slot.data) {
+                return true;
+            }
+            
+            return false;
         });
         
-        // Salta questo giorno se non ci sono slot disponibili per questa data specifica
+        // Se non ci sono slot disponibili dopo il filtraggio, salta questo giorno
         if (slotsForThisDay.length === 0) continue;
         
         // Crea una card per il giorno
