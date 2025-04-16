@@ -246,20 +246,43 @@ function renderWeek(weekNumber) {
             continue;
         }
         
-        // Filtra gli slot per questa data specifica
-        let slotsForThisDay = allSlots.filter(slot => {
-            // Se lo slot ha una data specifica che corrisponde alla data corrente
-            if (slot.data_completa === dayInfo.isoDate || slot.data === dayInfo.isoDate) {
-                return true;
-            }
+        // Per le settimane future, dobbiamo mostrare tutti i giorni (inclusi lunedì e martedì)
+        // Filtriamo gli slot in base alla data solo per la settimana corrente
+        const isCurrentWeek = weekNumber === 0;
+        let slotsForThisDay = [];
+        
+        if (isCurrentWeek) {
+            // Per la settimana corrente, filtra per data esatta
+            slotsForThisDay = allSlots.filter(slot => {
+                return (slot.data_completa === dayInfo.isoDate || slot.data === dayInfo.isoDate);
+            });
+        } else {
+            // Per le settimane future, raggruppa per data
+            // Prima organizziamo gli slot per data
+            const slotsByDate = {};
             
-            // Per le settimane future, accetta anche se non ha data specifica
-            if (weekNumber > 0 && !slot.data_completa && !slot.data) {
-                return true;
-            }
+            allSlots.forEach(slot => {
+                const dateKey = slot.data || slot.data_completa || 'generic';
+                if (!slotsByDate[dateKey]) {
+                    slotsByDate[dateKey] = [];
+                }
+                slotsByDate[dateKey].push(slot);
+            });
             
-            return false;
-        });
+            // Per questa specifica data, prendiamo gli slot corrispondenti
+            if (slotsByDate[dayInfo.isoDate]) {
+                slotsForThisDay = slotsByDate[dayInfo.isoDate];
+            } else if (slotsByDate['generic']) {
+                // Se non ci sono slot per questa data specifica ma ci sono slot generici, usiamo quelli
+                slotsForThisDay = slotsByDate['generic'];
+            } else {
+                // Altrimenti prendiamo il primo gruppo di slot disponibili per questo giorno della settimana
+                const firstDate = Object.keys(slotsByDate)[0];
+                if (firstDate) {
+                    slotsForThisDay = slotsByDate[firstDate];
+                }
+            }
+        }
         
         // Se non ci sono slot disponibili dopo il filtraggio, salta questo giorno
         if (slotsForThisDay.length === 0) continue;
