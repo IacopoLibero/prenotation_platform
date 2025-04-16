@@ -228,42 +228,25 @@ function renderWeek(weekNumber) {
     
     // Visualizza ogni giorno della settimana
     for (const dayInfo of daysInWeek) {
-        // Ottieni gli slot per questo giorno
+        // Ottieni gli slot per questo giorno della settimana
         const allSlots = weekData[dayInfo.dayName] || [];
         
-        // Modifica: Ora visualizziamo tutti gli slot per il giorno della settimana,
-        // non filtriamo più per data esatta se è in una settimana futura
-        let slotsForThisDay;
+        if (allSlots.length === 0) continue; // Salta se non ci sono slot per questo giorno della settimana
         
-        // Per la settimana corrente, filtra per data esatta
-        if (weekNumber === 0) {
-            slotsForThisDay = allSlots.filter(slot => {
-                // Verifica la corrispondenza con la data esatta di questa settimana
-                if (slot.data_completa) {
-                    return slot.data_completa === dayInfo.isoDate;
-                }
-                return slot.data === dayInfo.isoDate;
-            });
-        } else {
-            // Per le settimane future, mostra tutti gli slot di quel giorno della settimana
-            // ma raggruppiamo per ora per evitare duplicazioni
-            const slotsByTime = {};
-            
-            allSlots.forEach(slot => {
-                const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
-                // Se non abbiamo ancora incontrato questo orario, o abbiamo un orario con la data corrispondente,
-                // lo aggiungiamo/aggiorniamo
-                if (!slotsByTime[timeKey] || 
-                    (slot.data_completa && slot.data_completa === dayInfo.isoDate) ||
-                    (slot.data && slot.data === dayInfo.isoDate)) {
-                    slotsByTime[timeKey] = slot;
-                }
-            });
-            
-            slotsForThisDay = Object.values(slotsByTime);
-        }
+        // Filtra gli slot per questa data specifica
+        // Per qualsiasi settimana, mostriamo solo gli slot che corrispondono esattamente alla data
+        const slotsForThisDay = allSlots.filter(slot => {
+            // Se lo slot ha una data specifica, verifica che corrisponda alla data corrente
+            if (slot.data_completa && slot.data_completa !== dayInfo.isoDate) {
+                return false;
+            }
+            if (slot.data && slot.data !== dayInfo.isoDate) {
+                return false;
+            }
+            return true;
+        });
         
-        // Salta questo giorno se non ci sono slot disponibili
+        // Salta questo giorno se non ci sono slot disponibili per questa data specifica
         if (slotsForThisDay.length === 0) continue;
         
         // Crea una card per il giorno
