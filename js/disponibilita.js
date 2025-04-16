@@ -188,118 +188,69 @@ function renderWeek(weekNumber) {
         <div class="availability-container">
     `;
     
-    // Crea un array con tutti i giorni della settimana corrente
-    const daysInWeek = [];
-    const dayMapping = {
-        1: 'lunedi',
-        2: 'martedi',
-        3: 'mercoledi',
-        4: 'giovedi',
-        5: 'venerdi',
-        6: 'sabato',
-        0: 'domenica'
-    };
-    
-    // Genera tutti i giorni della settimana corrente
-    for (let i = 0; i < 7; i++) {
-        const day = new Date(weekStart);
-        day.setDate(weekStart.getDate() + i);
-        
-        const dayNum = day.getDay(); // 0-6
-        const dayName = dayMapping[dayNum];
-        const formattedDate = day.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        
-        // Ottieni la data in formato ISO per confronto
-        const isoDate = day.toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        daysInWeek.push({
-            date: day,
-            dayName: dayName,
-            formattedDate: formattedDate,
-            isoDate: isoDate
-        });
-    }
-    
-    // Ordina i giorni in modo che inizino da lunedì
-    daysInWeek.sort((a, b) => {
-        const order = { 'lunedi': 1, 'martedi': 2, 'mercoledi': 3, 'giovedi': 4, 'venerdi': 5, 'sabato': 6, 'domenica': 7 };
-        return order[a.dayName] - order[b.dayName];
-    });
-    
-    // Get today's date without time for comparison
+    // Get current date and set time to start of day for comparison
     const currentDate = new Date();
+    // Avanzare di un giorno (per mostrare solo dal giorno dopo)
+    currentDate.setDate(currentDate.getDate() + 1);
     currentDate.setHours(0, 0, 0, 0);
     
-    // Get today's day of week (0-6)
-    const currentDayOfWeek = currentDate.getDay(); // 0 = domenica, 1 = lunedì, ..., 6 = sabato
-    
-    // Visualizza ogni giorno della settimana
-    for (const dayInfo of daysInWeek) {
-        // Per la settimana corrente, mostra solo i giorni da domani in poi
-        // Per le settimane future, mostra solo da lunedì a venerdì
-        const dayDate = new Date(dayInfo.date);
-        dayDate.setHours(0, 0, 0, 0);
+    // Loop through days of the week (only weekdays)
+    for (let i = 1; i <= 5; i++) {  // 1=lunedi, 2=martedi, 3=mercoledi, 4=giovedi, 5=venerdi
+        const dayName = ['', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi'][i];
+        const slots = weekData[dayName];
         
-        // Controlla se questo è un giorno che dovremmo mostrare
-        // Regola 1: Per settimana corrente, mostra solo dal giorno dopo oggi
-        // Regola 2: Per tutte le settimane, mostra solo da lunedì a venerdì (1-5)
-        const dayNum = dayDate.getDay(); // 0-6
-        const shouldDisplay = (
-            // Per settimana corrente (0)
-            (weekNumber === 0 && dayDate > currentDate) ||
-            // Per settimane future, solo da lunedì a venerdì
-            (weekNumber > 0 && dayNum >= 1 && dayNum <= 5)
-        );
+        // If no slots for this day, skip
+        if (!slots || slots.length === 0) continue;
         
-        // Se non dobbiamo mostrare questo giorno, salta
-        if (!shouldDisplay) continue;
+        // Calculate the date for this day in the current week
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + (i - weekStart.getDay() + 7) % 7);
         
-        // Ottieni gli slot per questo giorno della settimana
-        const allSlots = weekData[dayInfo.dayName] || [];
+        // Format the date for display and comparison
+        const formattedDate = dayDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const isoDate = dayDate.toISOString().split('T')[0]; // YYYY-MM-DD
         
-        if (allSlots.length === 0) continue; // Salta se non ci sono slot per questo giorno della settimana
+        // IMPORTANTE: per la settimana corrente, mostra solo dal giorno dopo in poi
+        if (weekNumber === 0 && dayDate < currentDate) {
+            continue;  // Skip days before tomorrow
+        }
         
-        // Filtra gli slot per questa data specifica
-        let slotsForThisDay = allSlots.filter(slot => {
-            // Se lo slot ha una data specifica che corrisponde alla data corrente
-            if (slot.data_completa === dayInfo.isoDate || slot.data === dayInfo.isoDate) {
-                return true;
-            }
+        // Filter slots that match this exact date
+        const slotsForThisDate = slots.filter(slot => {
+            // Se lo slot ha una data specifica, controlla che sia quella corretta
+            if (slot.data_completa && slot.data_completa !== isoDate) return false;
+            if (slot.data && slot.data !== isoDate) return false;
             
-            // Per le settimane future, accetta anche se non ha data specifica
-            if (weekNumber > 0 && !slot.data_completa && !slot.data) {
-                return true;
-            }
-            
-            return false;
+            // Se non ha una data specifica, accettalo per settimane future
+            return true;
         });
         
-        // Se non ci sono slot disponibili dopo il filtraggio, salta questo giorno
-        if (slotsForThisDay.length === 0) continue;
+        // If no slots available after filtering, skip this day
+        if (slotsForThisDate.length === 0) continue;
         
-        // Crea una card per il giorno
+        // Add card for this day
         html += `
             <div class="day-card">
                 <h3 class="day-header">
-                    ${dayNames[dayInfo.dayName]}
-                    <span class="date-badge">${dayInfo.formattedDate}</span>
+                    ${dayNames[dayName]}
+                    <span class="date-badge">${formattedDate}</span>
                 </h3>
         `;
         
         // Sort slots by time
-        slotsForThisDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+        slotsForThisDate.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
         
-        // Usa un Set per evitare duplicazioni di orari
+        // Use a Set to avoid duplicating times
         const processedTimes = new Set();
         
-        slotsForThisDay.forEach(slot => {
-            // Crea una chiave unica per ogni slot (ora_inizio - ora_fine)
+        slotsForThisDate.forEach(slot => {
+            // Create a unique key for this slot (start_time - end_time)
             const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
             
-            // Salta se questo orario è già stato processato
+            // Skip if already processed
             if (processedTimes.has(timeKey)) return;
             
-            // Segna questo orario come processato
+            // Mark as processed
             processedTimes.add(timeKey);
             
             const statusClass = slot.stato === 'disponibile' ? 'status-available' : 
