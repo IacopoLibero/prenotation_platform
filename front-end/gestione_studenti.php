@@ -56,7 +56,6 @@ $result = $stmt->get_result();
     
     <main>
         <section>
-            <p>Visualizza gli studenti che seguono le tue lezioni</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

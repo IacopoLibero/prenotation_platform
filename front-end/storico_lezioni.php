@@ -53,7 +53,6 @@ $result = $stmt->get_result();
     
     <main>
         <section>
-            <p>Visualizza la cronologia delle tue lezioni</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

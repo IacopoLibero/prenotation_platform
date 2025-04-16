@@ -208,7 +208,6 @@ $current_date = date('Y-m-d');
     
     <main>
         <section>
-            <p>Visualizza e gestisci gli orari in cui sei disponibile per le lezioni</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

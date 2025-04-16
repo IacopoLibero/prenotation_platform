@@ -54,7 +54,6 @@ $result = $stmt->get_result();
     
     <main>
         <section>
-            <p>Gestisci le prenotazioni effettuate dagli studenti</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

@@ -37,9 +37,7 @@ $isTeacher = ($_SESSION['tipo'] === 'professore');
     </header>
     
     <main>
-        <section>
-            <p>Trova insegnanti per nome, email o materia</p>
-            
+        <section>            
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>
             

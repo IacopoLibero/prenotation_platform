@@ -45,7 +45,6 @@ $result = $stmt->get_result();
     
     <main>
         <section>
-            <p>Visualizza gli orari disponibili degli insegnanti</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

@@ -53,7 +53,6 @@ $result = $stmt->get_result();
     
     <main>
         <section>
-            <p>Crea, modifica e gestisci le tue lezioni</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>

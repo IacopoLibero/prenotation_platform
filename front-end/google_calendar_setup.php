@@ -59,7 +59,6 @@ $calendar_link = $row['google_calendar_link'] ?? '';
    
     <main>
         <section>
-            <p>Collega il tuo Google Calendar per gestire automaticamente la tua disponibilità</p>
             
             <!-- Include standardized ad container -->
             <?php include_once('../includes/ad-container.php'); ?>
