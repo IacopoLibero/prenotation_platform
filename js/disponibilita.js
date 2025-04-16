@@ -233,16 +233,36 @@ function renderWeek(weekNumber) {
         
         if (allSlots.length === 0) continue; // Salta se non ci sono slot per questo giorno della settimana
         
-        // Filtra gli slot per questa data specifica
-        // Per qualsiasi settimana, mostriamo solo gli slot che corrispondono esattamente alla data
-        const slotsForThisDay = allSlots.filter(slot => {
-            // Se lo slot ha una data specifica, verifica che corrisponda alla data corrente
+        // Funzione per controllare se abbiamo slot per questa data specifica o per il giorno della settimana generico
+        const hasSlotsForDate = (slots, dateString) => {
+            return slots.some(slot => {
+                // Se lo slot ha una data_completa, controlla che corrisponda alla data corrente
+                if (slot.data_completa) {
+                    return slot.data_completa === dateString;
+                }
+                // Se lo slot ha una data, controlla che corrisponda alla data corrente
+                if (slot.data) {
+                    return slot.data === dateString;
+                }
+                // Se lo slot non ha una data specifica, mostriamo comunque gli slot per questa settimana
+                return weekNumber === 0 || weekNumber === 1;
+            });
+        };
+        
+        // Controlla se abbiamo almeno uno slot per questa data
+        if (!hasSlotsForDate(allSlots, dayInfo.isoDate)) continue;
+        
+        // Filtra gli slot per questa data specifica o per il giorno della settimana generico
+        let slotsForThisDay = allSlots.filter(slot => {
+            // Se lo slot ha una data specifica ma non corrisponde alla data corrente, escludilo
             if (slot.data_completa && slot.data_completa !== dayInfo.isoDate) {
                 return false;
             }
             if (slot.data && slot.data !== dayInfo.isoDate) {
                 return false;
             }
+            
+            // Includi lo slot se non ha una data specifica o se corrisponde alla data corrente
             return true;
         });
         
