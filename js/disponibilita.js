@@ -133,6 +133,8 @@ function changeWeek(newWeek) {
 
 // Funzione per renderizzare la settimana corrente
 function renderWeek(weekNumber) {
+    console.log("INIZIO RENDERIZZAZIONE SETTIMANA:", weekNumber);
+    
     const container = document.getElementById('weekContainer');
     if (!container) return;
     
@@ -155,17 +157,16 @@ function renderWeek(weekNumber) {
     
     // Verifica se ci sono slot per questa settimana
     let hasSlots = false;
-    let totalSlots = 0;
-    
-    Object.keys(weekData).forEach(day => {
+    for (const day in weekData) {
         if (weekData[day] && weekData[day].length > 0) {
             hasSlots = true;
-            totalSlots += weekData[day].length;
+            break;
         }
-    });
+    }
     
-    console.log('Has slots:', hasSlots, 'Total slots:', totalSlots);
+    console.log('Has slots:', hasSlots);
     
+    // Se non ci sono slot disponibili, mostra un messaggio
     if (!hasSlots) {
         container.innerHTML = `
             <div class="week-header">
@@ -179,7 +180,7 @@ function renderWeek(weekNumber) {
         return;
     }
     
-    // Costruisci l'HTML per la disponibilità
+    // Build HTML for availability
     let html = `
         <div class="week-header">
             ${weekNumber === 0 ? 'Settimana corrente' : weekNumber === 1 ? 'Prossima settimana' : 'Settimana ' + (weekNumber + 1)}
@@ -195,53 +196,48 @@ function renderWeek(weekNumber) {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
     
-    // Genera le date della settimana corrente
-    const weekDates = {};
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(weekStart);
-        date.setDate(weekStart.getDate() + i);
-        const dayName = daysOrder[date.getDay() === 0 ? 6 : date.getDay() - 1]; // Converte da 0-6 all'indice per daysOrder
-        weekDates[dayName] = {
-            date: date,
-            isoDate: date.toISOString().split('T')[0],
-            formattedDate: date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
-        };
-    }
-    
     // Visualizza ogni giorno della settimana nell'ordine corretto
-    daysOrder.forEach(dayName => {
-        // Se non ci sono slot per questo giorno, salta
-        if (!weekData[dayName] || weekData[dayName].length === 0) return;
+    for (const dayName of daysOrder) {
+        // Salta se non ci sono slot per questo giorno
+        if (!weekData[dayName] || weekData[dayName].length === 0) {
+            console.log(`Nessuno slot per ${dayName}`);
+            continue;
+        }
         
-        const dayInfo = weekDates[dayName];
-        if (!dayInfo) return;
+        console.log(`Elaborazione giorno ${dayName}, trovati ${weekData[dayName].length} slot`);
         
-        // Per la settimana corrente, salta i giorni passati
-        if (weekNumber === 0 && dayInfo.date < currentDate) return;
+        // Calcola la data per questo giorno della settimana
+        const dayIndex = daysOrder.indexOf(dayName);
+        const dayDate = new Date(weekStart);
+        dayDate.setDate(weekStart.getDate() + dayIndex);
         
-        // Ottieni gli slot per questo giorno
-        let slotsForThisDay = weekData[dayName] || [];
+        // Per la settimana corrente, salta i giorni già passati
+        if (weekNumber === 0 && dayDate < currentDate) {
+            console.log(`${dayName} è nel passato, salto`);
+            continue;
+        }
         
-        // Se non ci sono slot, salta
-        if (slotsForThisDay.length === 0) return;
+        // Formatta la data per la visualizzazione
+        const formattedDate = dayDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
         // Crea una card per il giorno
         html += `
             <div class="day-card">
                 <h3 class="day-header">
                     ${dayNames[dayName]}
-                    <span class="date-badge">${dayInfo.formattedDate}</span>
+                    <span class="date-badge">${formattedDate}</span>
                 </h3>
         `;
         
         // Ordina gli slot per orario
-        slotsForThisDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
+        const slotsForDay = [...weekData[dayName]]; // Crea una copia per non modificare l'originale
+        slotsForDay.sort((a, b) => a.ora_inizio.localeCompare(b.ora_inizio));
         
         // Usa un Set per evitare duplicazioni di orari
         const processedTimes = new Set();
         
-        slotsForThisDay.forEach(slot => {
-            // Chiave unica per ogni slot (ora_inizio - ora_fine)
+        // Mostra tutti gli slot disponibili
+        slotsForDay.forEach(slot => {
             const timeKey = `${slot.ora_inizio}-${slot.ora_fine}`;
             
             // Salta se questo orario è già stato processato
@@ -263,10 +259,11 @@ function renderWeek(weekNumber) {
         });
         
         html += `</div>`;
-    });
+    }
     
     html += `</div>`;
     container.innerHTML = html;
+    console.log("FINE RENDERIZZAZIONE SETTIMANA:", weekNumber);
 }
 
 // Register event listeners when DOM is loaded - solo un event listener
