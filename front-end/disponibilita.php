@@ -59,14 +59,14 @@ $disp_result = $stmt->get_result();
 // Count available slots
 $total_slots = $disp_result->num_rows;
 
-// Recupera il link di calendario Google
-$query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
+// Recupera i calendari Google
+$query = "SELECT COUNT(*) AS calendar_count FROM Calendari_Professori WHERE teacher_email = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $calendar_result = $stmt->get_result();
 $calendar_row = $calendar_result->fetch_assoc();
-$has_google_calendar = !empty($calendar_row['google_calendar_link']);
+$has_google_calendar = $calendar_row['calendar_count'] > 0;
 
 // Get lessons into a more usable format organized by date
 $lessons_by_date = [];
