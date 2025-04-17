@@ -142,6 +142,19 @@ button[type="submit"]:hover,
     border: 1px solid #eee;
 }
 
+.calendar-buffer {
+    margin-top: 10px;
+    background-color: #f0f7ff;
+    border: 1px solid #cce5ff;
+}
+
+.calendar-buffer h4 {
+    margin-top: 0;
+    color: #2c3e50;
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
 .buffer-option {
     margin-bottom: 15px;
     display: flex;

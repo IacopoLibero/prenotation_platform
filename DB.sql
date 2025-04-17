@@ -32,6 +32,8 @@ CREATE TABLE `Calendari_Professori` (
   `google_calendar_link` varchar(255) NOT NULL,
   `google_calendar_id` varchar(100) DEFAULT NULL,
   `nome_calendario` varchar(100) DEFAULT 'Calendario',
+  `ore_prima_evento` float DEFAULT '0',
+  `ore_dopo_evento` float DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `teacher_email` (`teacher_email`),
@@ -70,9 +72,7 @@ CREATE TABLE `Preferenze_Disponibilita` (
   `ora_inizio_mattina` time DEFAULT '08:00:00',
   `ora_fine_mattina` time DEFAULT '13:00:00',
   `ora_inizio_pomeriggio` time DEFAULT '14:00:00',
-  `ora_fine_pomeriggio` time DEFAULT '19:00:00',
-  `ore_prima_evento` float DEFAULT '0',
-  `ore_dopo_evento` float DEFAULT '0'
+  `ora_fine_pomeriggio` time DEFAULT '19:00:00'
 );
 
 -- Tabella Preferiti

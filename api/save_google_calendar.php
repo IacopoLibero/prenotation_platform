@@ -16,6 +16,8 @@ $teacher_email = $_SESSION['email'];
 $calendar_links = $_POST['calendar_links'] ?? [];
 $calendar_ids = $_POST['calendar_ids'] ?? [];
 $calendar_names = $_POST['calendar_names'] ?? [];
+$ore_prima_evento = $_POST['ore_prima_evento'] ?? [];
+$ore_dopo_evento = $_POST['ore_dopo_evento'] ?? [];
 
 // Recupero delle preferenze
 $weekend = isset($_POST['weekend']) ? intval($_POST['weekend']) : 0;
@@ -25,10 +27,6 @@ $ora_inizio_mattina = $_POST['ora_inizio_mattina'] ?? '08:00';
 $ora_fine_mattina = $_POST['ora_fine_mattina'] ?? '13:00';
 $ora_inizio_pomeriggio = $_POST['ora_inizio_pomeriggio'] ?? '14:00';
 $ora_fine_pomeriggio = $_POST['ora_fine_pomeriggio'] ?? '19:00';
-
-// Aggiungiamo i parametri di buffer
-$ore_prima_evento = isset($_POST['ore_prima_evento']) ? floatval($_POST['ore_prima_evento']) : 0;
-$ore_dopo_evento = isset($_POST['ore_dopo_evento']) ? floatval($_POST['ore_dopo_evento']) : 0;
 
 // Validazione base
 if (empty($calendar_links)) {
@@ -66,6 +64,8 @@ try {
         
         $calendar_id_value = isset($calendar_ids[$index]) ? intval($calendar_ids[$index]) : 0;
         $calendar_name = isset($calendar_names[$index]) ? $calendar_names[$index] : 'Calendario';
+        $ore_prima = isset($ore_prima_evento[$index]) ? floatval($ore_prima_evento[$index]) : 0;
+        $ore_dopo = isset($ore_dopo_evento[$index]) ? floatval($ore_dopo_evento[$index]) : 0;
         
         // Validazione del link
         if (!filter_var($calendar_link, FILTER_VALIDATE_URL)) {
@@ -134,16 +134,16 @@ try {
         if ($calendar_id_value > 0) {
             // Aggiorna calendario esistente
             $update_query = "UPDATE Calendari_Professori 
-                            SET google_calendar_link = ?, google_calendar_id = ?, nome_calendario = ? 
+                            SET google_calendar_link = ?, google_calendar_id = ?, nome_calendario = ?, ore_prima_evento = ?, ore_dopo_evento = ? 
                             WHERE id = ? AND teacher_email = ?";
             $stmt = $conn->prepare($update_query);
-            $stmt->bind_param("sssss", $calendar_link, $google_calendar_id, $calendar_name, $calendar_id_value, $teacher_email);
+            $stmt->bind_param("sssddis", $calendar_link, $google_calendar_id, $calendar_name, $ore_prima, $ore_dopo, $calendar_id_value, $teacher_email);
         } else {
             // Inserisci nuovo calendario
-            $insert_query = "INSERT INTO Calendari_Professori (teacher_email, google_calendar_link, google_calendar_id, nome_calendario) 
-                           VALUES (?, ?, ?, ?)";
+            $insert_query = "INSERT INTO Calendari_Professori (teacher_email, google_calendar_link, google_calendar_id, nome_calendario, ore_prima_evento, ore_dopo_evento) 
+                           VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_query);
-            $stmt->bind_param("ssss", $teacher_email, $calendar_link, $google_calendar_id, $calendar_name);
+            $stmt->bind_param("ssssdd", $teacher_email, $calendar_link, $google_calendar_id, $calendar_name, $ore_prima, $ore_dopo);
         }
         
         if ($stmt->execute()) {
@@ -165,28 +165,24 @@ try {
         $update_query = "UPDATE Preferenze_Disponibilita 
                         SET weekend = ?, mattina = ?, pomeriggio = ?, 
                             ora_inizio_mattina = ?, ora_fine_mattina = ?,
-                            ora_inizio_pomeriggio = ?, ora_fine_pomeriggio = ?,
-                            ore_prima_evento = ?, ore_dopo_evento = ?
+                            ora_inizio_pomeriggio = ?, ora_fine_pomeriggio = ?
                         WHERE teacher_email = ?";
         $stmt = $conn->prepare($update_query);
-        $stmt->bind_param("iiissssdds", $weekend, $mattina, $pomeriggio, 
+        $stmt->bind_param("iiisssss", $weekend, $mattina, $pomeriggio, 
                         $ora_inizio_mattina, $ora_fine_mattina, 
                         $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
-                        $ore_prima_evento, $ore_dopo_evento,
                         $teacher_email);
     } else {
         // Inserisce nuove preferenze
         $insert_query = "INSERT INTO Preferenze_Disponibilita 
                         (teacher_email, weekend, mattina, pomeriggio, 
                         ora_inizio_mattina, ora_fine_mattina, 
-                        ora_inizio_pomeriggio, ora_fine_pomeriggio,
-                        ore_prima_evento, ore_dopo_evento)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        ora_inizio_pomeriggio, ora_fine_pomeriggio)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($insert_query);
-        $stmt->bind_param("siisssssdd", $teacher_email, $weekend, $mattina, $pomeriggio, 
+        $stmt->bind_param("siiissss", $teacher_email, $weekend, $mattina, $pomeriggio, 
                         $ora_inizio_mattina, $ora_fine_mattina, 
-                        $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
-                        $ore_prima_evento, $ore_dopo_evento);
+                        $ora_inizio_pomeriggio, $ora_fine_pomeriggio);
     }
 
     if (!$stmt->execute()) {

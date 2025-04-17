@@ -22,6 +22,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="hidden" name="calendar_ids[]" value="0">
                 <label for="calendar_nome_${newIndex}" class="calendar-name-label">Nome (opzionale):</label>
                 <input type="text" id="calendar_nome_${newIndex}" name="calendar_names[]" value="Calendario" placeholder="Es: Personale, Lavoro, ecc.">
+                
+                <div class="buffer-options calendar-buffer">
+                    <h4>Tempo di buffer per questo calendario</h4>
+                    <div class="buffer-option">
+                        <label for="ore_prima_evento_${newIndex}">Non disponibile prima di un evento per:</label>
+                        <input type="number" id="ore_prima_evento_${newIndex}" name="ore_prima_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="0"> ore
+                        <p class="help-text">Ti darà tempo per prepararti prima dell'evento.</p>
+                    </div>
+                    <div class="buffer-option">
+                        <label for="ore_dopo_evento_${newIndex}">Non disponibile dopo un evento per:</label>
+                        <input type="number" id="ore_dopo_evento_${newIndex}" name="ore_dopo_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="0"> ore
+                        <p class="help-text">Ti darà tempo per riposare dopo l'evento.</p>
+                    </div>
+                </div>
+                
                 <button type="button" class="btn-remove-calendar" onclick="removeCalendarItem(this)">Rimuovi</button>
             </div>
         `;
@@ -36,6 +51,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const calendarLinks = Array.from(document.getElementsByName('calendar_links[]')).map(input => input.value);
         const calendarIds = Array.from(document.getElementsByName('calendar_ids[]')).map(input => input.value);
         const calendarNames = Array.from(document.getElementsByName('calendar_names[]')).map(input => input.value);
+        const orePrimaEvento = Array.from(document.getElementsByName('ore_prima_evento[]')).map(input => input.value);
+        const oreDopoEvento = Array.from(document.getElementsByName('ore_dopo_evento[]')).map(input => input.value);
         
         const weekend = document.getElementById('weekend').checked;
         const mattina = document.getElementById('mattina').checked;
@@ -44,8 +61,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const oraFineMattina = document.getElementById('ora_fine_mattina').value;
         const oraInizioPomeriggio = document.getElementById('ora_inizio_pomeriggio').value;
         const oraFinePomeriggio = document.getElementById('ora_fine_pomeriggio').value;
-        const orePrimaEvento = document.getElementById('ore_prima_evento').value;
-        const oreDopoEvento = document.getElementById('ore_dopo_evento').value;
         
         // Validazione base
         if (calendarLinks.some(link => !link)) {
@@ -75,6 +90,8 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('calendar_links[]', link);
             formData.append('calendar_ids[]', calendarIds[i]);
             formData.append('calendar_names[]', calendarNames[i]);
+            formData.append('ore_prima_evento[]', orePrimaEvento[i]);
+            formData.append('ore_dopo_evento[]', oreDopoEvento[i]);
         });
         
         formData.append('weekend', weekend ? 1 : 0);
@@ -84,8 +101,6 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('ora_fine_mattina', oraFineMattina);
         formData.append('ora_inizio_pomeriggio', oraInizioPomeriggio);
         formData.append('ora_fine_pomeriggio', oraFinePomeriggio);
-        formData.append('ore_prima_evento', orePrimaEvento);
-        formData.append('ore_dopo_evento', oreDopoEvento);
         
         // Mostriamo un messaggio di attesa
         const submitBtn = this.querySelector('button[type="submit"]');

@@ -45,6 +45,10 @@ try {
     // Per ogni calendario, scarichiamo e analizziamo gli eventi
     while ($calendar_data = $result->fetch_assoc()) {
         $calendar_url = $calendar_data['google_calendar_link'];
+        $calendar_id = $calendar_data['id']; 
+        $buffer_prima = $calendar_data['ore_prima_evento'];
+        $buffer_dopo = $calendar_data['ore_dopo_evento'];
+        
         $ical_content = @file_get_contents($calendar_url);
         
         if ($ical_content === false) {
@@ -66,6 +70,13 @@ try {
         
         // Analizza gli eventi dal calendario iCal
         $events = parse_ical_events($ical_content);
+        
+        // Aggiungi le informazioni di buffer e calendario a ogni evento
+        foreach ($events as &$event) {
+            $event['calendar_id'] = $calendar_id;
+            $event['buffer_prima'] = $buffer_prima;
+            $event['buffer_dopo'] = $buffer_dopo;
+        }
         
         // Aggiungi gli eventi all'array combinato
         $all_events = array_merge($all_events, $events);
@@ -262,7 +273,7 @@ function generate_availability($dates, $events, $preferences) {
                     ];
                     
                     // Only add if slot is not occupied
-                    if (!is_slot_occupied($date_str, $slot, $events, $preferences)) {
+                    if (!is_slot_occupied($date_str, $slot, $events)) {
                         $availability[] = $slot;
                         $day_slots++;
                         $slots_by_day[$day_name]++;
@@ -304,7 +315,7 @@ function generate_availability($dates, $events, $preferences) {
                     ];
                     
                     // Only add if slot is not occupied
-                    if (!is_slot_occupied($date_str, $slot, $events, $preferences)) {
+                    if (!is_slot_occupied($date_str, $slot, $events)) {
                         $availability[] = $slot;
                         $day_slots++;
                         $slots_by_day[$day_name]++;
@@ -319,12 +330,8 @@ function generate_availability($dates, $events, $preferences) {
     return $availability;
 }
 
-// Funzione aggiornata per controllare se uno slot è occupato
-function is_slot_occupied($date_str, $slot, $events, $preferences) {
-    // Recupera i buffer di tempo dalle preferenze
-    $buffer_before = isset($preferences['ore_prima_evento']) ? floatval($preferences['ore_prima_evento']) : 0;
-    $buffer_after = isset($preferences['ore_dopo_evento']) ? floatval($preferences['ore_dopo_evento']) : 0;
-    
+// Funzione aggiornata per controllare se uno slot è occupato usando i buffer specifici per ogni evento
+function is_slot_occupied($date_str, $slot, $events) {
     // Create precise time objects for slot
     $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio'] . ':00');
     $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine'] . ':00');
@@ -338,6 +345,10 @@ function is_slot_occupied($date_str, $slot, $events, $preferences) {
         
         $event_start = $event['start'];
         $event_end = $event['end'];
+        
+        // Recupera i buffer di tempo specifici per questo evento
+        $buffer_before = isset($event['buffer_prima']) ? floatval($event['buffer_prima']) : 0;
+        $buffer_after = isset($event['buffer_dopo']) ? floatval($event['buffer_dopo']) : 0;
         
         // Check if event date matches the slot date
         $event_start_date = $event_start->format('Y-m-d');

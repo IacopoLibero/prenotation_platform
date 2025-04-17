@@ -17,7 +17,7 @@ $result = $stmt->get_result();
 $preferences = $result->num_rows > 0 ? $result->fetch_assoc() : null;
 
 // Recupera tutti i calendari Google già salvati per questo professore
-$query = "SELECT id, google_calendar_link, nome_calendario FROM Calendari_Professori WHERE teacher_email = ? ORDER BY id";
+$query = "SELECT id, google_calendar_link, nome_calendario, ore_prima_evento, ore_dopo_evento FROM Calendari_Professori WHERE teacher_email = ? ORDER BY id";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
@@ -91,6 +91,20 @@ while ($row = $result->fetch_assoc()) {
                                     <input type="hidden" name="calendar_ids[]" value="0">
                                     <label for="calendar_nome_0" class="calendar-name-label">Nome (opzionale):</label>
                                     <input type="text" id="calendar_nome_0" name="calendar_names[]" value="Calendario" placeholder="Es: Personale, Lavoro, ecc.">
+                                    
+                                    <div class="buffer-options calendar-buffer">
+                                        <h4>Tempo di buffer per questo calendario</h4>
+                                        <div class="buffer-option">
+                                            <label for="ore_prima_evento_0">Non disponibile prima di un evento per:</label>
+                                            <input type="number" id="ore_prima_evento_0" name="ore_prima_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="0"> ore
+                                            <p class="help-text">Ti darà tempo per prepararti prima dell'evento.</p>
+                                        </div>
+                                        <div class="buffer-option">
+                                            <label for="ore_dopo_evento_0">Non disponibile dopo un evento per:</label>
+                                            <input type="number" id="ore_dopo_evento_0" name="ore_dopo_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="0"> ore
+                                            <p class="help-text">Ti darà tempo per riposare dopo l'evento.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <?php else: ?>
@@ -103,6 +117,21 @@ while ($row = $result->fetch_assoc()) {
                                     <input type="hidden" name="calendar_ids[]" value="<?php echo $calendario['id']; ?>">
                                     <label for="calendar_nome_<?php echo $index; ?>" class="calendar-name-label">Nome (opzionale):</label>
                                     <input type="text" id="calendar_nome_<?php echo $index; ?>" name="calendar_names[]" value="<?php echo htmlspecialchars($calendario['nome_calendario']); ?>" placeholder="Es: Personale, Lavoro, ecc.">
+                                    
+                                    <div class="buffer-options calendar-buffer">
+                                        <h4>Tempo di buffer per questo calendario</h4>
+                                        <div class="buffer-option">
+                                            <label for="ore_prima_evento_<?php echo $index; ?>">Non disponibile prima di un evento per:</label>
+                                            <input type="number" id="ore_prima_evento_<?php echo $index; ?>" name="ore_prima_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo htmlspecialchars($calendario['ore_prima_evento']); ?>"> ore
+                                            <p class="help-text">Ti darà tempo per prepararti prima dell'evento.</p>
+                                        </div>
+                                        <div class="buffer-option">
+                                            <label for="ore_dopo_evento_<?php echo $index; ?>">Non disponibile dopo un evento per:</label>
+                                            <input type="number" id="ore_dopo_evento_<?php echo $index; ?>" name="ore_dopo_evento[]" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo htmlspecialchars($calendario['ore_dopo_evento']); ?>"> ore
+                                            <p class="help-text">Ti darà tempo per riposare dopo l'evento.</p>
+                                        </div>
+                                    </div>
+                                    
                                     <?php if ($index > 0): ?>
                                     <button type="button" class="btn-remove-calendar" onclick="removeCalendarItem(this)">Rimuovi</button>
                                     <?php endif; ?>
@@ -156,23 +185,6 @@ while ($row = $result->fetch_assoc()) {
                                     <label for="ora_fine_pomeriggio">Alle:</label>
                                     <input type="time" id="ora_fine_pomeriggio" name="ora_fine_pomeriggio" value="<?php echo $preferences ? $preferences['ora_fine_pomeriggio'] : '19:00'; ?>">
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div class="buffer-options">
-                            <h3>Tempo di buffer tra eventi</h3>
-                            <p class="info-text">Imposta un tempo di buffer prima e dopo gli eventi del tuo calendario per evitare sovrapposizioni.</p>
-                            
-                            <div class="buffer-option">
-                                <label for="ore_prima_evento">Non disponibile prima di un evento per:</label>
-                                <input type="number" id="ore_prima_evento" name="ore_prima_evento" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo $preferences ? $preferences['ore_prima_evento'] : '0'; ?>"> ore
-                                <p class="help-text">Ti darà tempo per prepararti prima dell'evento.</p>
-                            </div>
-                            
-                            <div class="buffer-option">
-                                <label for="ore_dopo_evento">Non disponibile dopo un evento per:</label>
-                                <input type="number" id="ore_dopo_evento" name="ore_dopo_evento" min="0" max="12" step="0.5" class="buffer-input" value="<?php echo $preferences ? $preferences['ore_dopo_evento'] : '0'; ?>"> ore
-                                <p class="help-text">Ti darà tempo per riposare dopo l'evento.</p>
                             </div>
                         </div>
                         
