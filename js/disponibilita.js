@@ -1,4 +1,6 @@
-// Variabili globali
+//FUNZIONA NON TOCCARE STO CAZZO DI FILE
+
+// // Variabili globali
 let currentWeek = 0;
 let availabilityData = {};
 let dayNames = {};
