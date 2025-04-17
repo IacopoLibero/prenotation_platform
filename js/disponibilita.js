@@ -143,17 +143,34 @@ function renderWeek(weekNumber) {
     
     // Calcola l'intervallo di date per questa settimana
     const today = new Date();
+    
+    // Ottieni il primo giorno della settimana corrente (lunedì)
+    const currentDate = new Date(today);
+    const dayOfWeek = currentDate.getDay() || 7; // Converti 0 (domenica) in 7
+    const diff = currentDate.getDate() - dayOfWeek + 1; // Aggiusta per iniziare da lunedì
+    
+    // Calcola la data di inizio per la settimana richiesta
     const weekStart = new Date(today);
-    
-    // Calcola il primo giorno della settimana (lunedì)
-    const dayOfWeek = today.getDay(); // 0 = domenica, 1 = lunedì, ..., 6 = sabato
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Aggiusta per iniziare da lunedì
-    
     weekStart.setDate(diff + (weekNumber * 7));
+    
+    // Calcola la data di fine settimana (domenica)
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekStart.getDate() + 6);
     
-    const weekDateRange = `${weekStart.toLocaleDateString('it-IT')} - ${weekEnd.toLocaleDateString('it-IT')}`;
+    // Formato data per visualizzazione
+    const formatDate = (date) => {
+        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    };
+    
+    const weekDateRange = `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
+    
+    // Creiamo un array con tutte le date della settimana per un riferimento preciso
+    const datesOfWeek = [];
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+        datesOfWeek.push(date);
+    }
     
     // Verifica se ci sono slot per questa settimana
     let hasSlots = false;
@@ -166,11 +183,22 @@ function renderWeek(weekNumber) {
     
     console.log('Has slots:', hasSlots);
     
+    // Ottieni i nomi delle settimane
+    const weekNames = {
+        0: 'Questa settimana',
+        1: 'Prossima settimana',
+        2: 'Tra due settimane',
+        3: 'Settimana 4'
+    };
+    
+    // Titolo della settimana appropriato
+    const weekTitle = weekNames[weekNumber] !== undefined ? weekNames[weekNumber] : `Settimana ${weekNumber + 1}`;
+    
     // Se non ci sono slot disponibili, mostra un messaggio
     if (!hasSlots) {
         container.innerHTML = `
             <div class="week-header">
-                ${weekNumber === 0 ? 'Settimana corrente' : weekNumber === 1 ? 'Prossima settimana' : 'Settimana ' + (weekNumber + 1)}
+                ${weekTitle}
                 <div class="week-dates">${weekDateRange}</div>
             </div>
             <div class="no-availability">
@@ -183,7 +211,7 @@ function renderWeek(weekNumber) {
     // Build HTML for availability
     let html = `
         <div class="week-header">
-            ${weekNumber === 0 ? 'Settimana corrente' : weekNumber === 1 ? 'Prossima settimana' : 'Settimana ' + (weekNumber + 1)}
+            ${weekTitle}
             <div class="week-dates">${weekDateRange}</div>
         </div>
         <div class="availability-container">
@@ -191,10 +219,6 @@ function renderWeek(weekNumber) {
     
     // Ordine dei giorni della settimana per visualizzazione
     const daysOrder = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
-    
-    // Ottieni la data corrente per confronto
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
     
     // Visualizza ogni giorno della settimana nell'ordine corretto
     for (const dayName of daysOrder) {

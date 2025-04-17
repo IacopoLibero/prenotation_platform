@@ -81,34 +81,35 @@ while ($row = $lessons_result->fetch_assoc()) {
 // Organize lessons by week and day
 $availability_by_week = [];
 $now = new DateTime();
-$now->setTime(0, 0, 0); // Reset time to start of day
-$weeks_to_show = 3;
+
+// Get the start of the current week (Monday)
+$start_of_week = clone $now;
+$day_of_week = (int)$start_of_week->format('N'); // 1 (Monday) to 7 (Sunday)
+$start_of_week->modify('-' . ($day_of_week - 1) . ' days'); // Go back to Monday
+$start_of_week->setTime(0, 0, 0); // Reset time to start of day
+
+$weeks_to_show = 4; // Showing current + 3 future weeks
 
 // Process each lesson and organize by week
 foreach ($lessons_by_date as $date_str => $slots) {
     $lesson_date = new DateTime($date_str);
     $lesson_date->setTime(0, 0, 0); // Reset time to start of day
     
-    // Calcola la differenza in giorni
-    $interval = $now->diff($lesson_date);
-    $days_diff = $interval->days;
-    
-    // Skip if in the past (only if it's really in the past)
-    if ($interval->invert && $days_diff > 0) {
+    // Skip if in the past
+    if ($lesson_date < $now) {
         continue;
     }
     
-    // MODIFICA: Per date future, usa un metodo deterministico invece che randomico
-    // Questo garantisce che ogni data appaia sempre nella stessa settimana
-    if ($days_diff > 21) {
-        // Convertire date del 2025 nelle prime settimane in modo prevedibile
-        // usando il mese e il giorno per ottenere un numero da 0 a 2
-        $month = (int)$lesson_date->format('m');
-        $day = (int)$lesson_date->format('d');
-        $week_number = ($month + $day) % 3; // Distribuisce tra 0, 1 e 2 in modo prevedibile
-    } else {
-        // Calculate which week this belongs to (0 = current week, 1 = next week, etc.)
-        $week_number = min(floor($days_diff / 7), 2); // Limita a massimo 2 settimane
+    // Calculate which week this belongs to based on start of current week
+    $interval = $start_of_week->diff($lesson_date);
+    $days_diff = $interval->days;
+    
+    // The week number is determined by how many 7-day periods have passed since start of current week
+    $week_number = floor($days_diff / 7);
+    
+    // Skip if beyond our weeks limit (0=current week, 1=next week, etc.)
+    if ($week_number >= $weeks_to_show) {
+        continue;
     }
     
     // Store date info for better rendering
