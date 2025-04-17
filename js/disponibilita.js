@@ -188,88 +188,41 @@ function renderWeek(weekNumber) {
         <div class="availability-container">
     `;
     
-    // Crea un array con tutti i giorni della settimana corrente
-    const daysInWeek = [];
-    const dayMapping = {
-        1: 'lunedi',
-        2: 'martedi',
-        3: 'mercoledi',
-        4: 'giovedi',
-        5: 'venerdi',
-        6: 'sabato',
-        0: 'domenica'
-    };
-    
-    // Genera tutti i giorni della settimana corrente
-    for (let i = 0; i < 7; i++) {
-        const day = new Date(weekStart);
-        day.setDate(weekStart.getDate() + i);
-        
-        const dayNum = day.getDay(); // 0-6
-        const dayName = dayMapping[dayNum];
-        const formattedDate = day.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        
-        // Ottieni la data in formato ISO per confronto
-        const isoDate = day.toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        daysInWeek.push({
-            date: day,
-            dayName: dayName,
-            formattedDate: formattedDate,
-            isoDate: isoDate
-        });
-    }
-    
-    // Ordina i giorni in modo che inizino da lunedì
-    daysInWeek.sort((a, b) => {
-        const order = { 'lunedi': 1, 'martedi': 2, 'mercoledi': 3, 'giovedi': 4, 'venerdi': 5, 'sabato': 6, 'domenica': 7 };
-        return order[a.dayName] - order[b.dayName];
-    });
+    // Ordine dei giorni della settimana
+    const daysOrder = ['lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica'];
     
     // Get today's date without time for comparison
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
     
-    // Visualizza ogni giorno della settimana
-    for (const dayInfo of daysInWeek) {
-        // Ottieni gli slot per questo giorno della settimana
-        const allSlots = weekData[dayInfo.dayName] || [];
+    // Visualizza ogni giorno della settimana nell'ordine corretto
+    for (const dayName of daysOrder) {
+        // Salta se questo giorno non ha slot disponibili
+        if (!weekData[dayName] || weekData[dayName].length === 0) continue;
         
-        if (allSlots.length === 0) continue; // Salta se non ci sono slot per questo giorno della settimana
+        // Per la settimana corrente, calcola la data di questo giorno
+        const dayDate = new Date(weekStart);
+        const dayIndex = daysOrder.indexOf(dayName);
+        dayDate.setDate(weekStart.getDate() + dayIndex);
         
-        // Per la settimana corrente, mostra solo i giorni da oggi in poi
-        const dayDate = new Date(dayInfo.date);
-        dayDate.setHours(0, 0, 0, 0);
-        
-        // Se è la settimana corrente e questo giorno è prima di oggi, salta
+        // Se è la settimana corrente e questo giorno è già passato, salta
+        // Per le settimane future (weekNumber > 0), mostra tutti i giorni da lunedì a domenica
         if (weekNumber === 0 && dayDate < currentDate) {
             continue;
         }
         
-        // Filtra gli slot per questa data specifica
-        let slotsForThisDay = allSlots.filter(slot => {
-            // Se lo slot ha una data specifica che corrisponde alla data corrente
-            if (slot.data_completa === dayInfo.isoDate || slot.data === dayInfo.isoDate) {
-                return true;
-            }
-            
-            // Per le settimane future, accetta anche se non ha data specifica
-            if (weekNumber > 0 && !slot.data_completa && !slot.data) {
-                return true;
-            }
-            
-            return false;
-        });
+        // Ottieni una data formattata per la visualizzazione
+        const formattedDate = dayDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        // Se non ci sono slot disponibili dopo il filtraggio, salta questo giorno
-        if (slotsForThisDay.length === 0) continue;
+        // Get all slots for this day
+        const slotsForThisDay = weekData[dayName];
         
         // Crea una card per il giorno
         html += `
             <div class="day-card">
                 <h3 class="day-header">
-                    ${dayNames[dayInfo.dayName]}
-                    <span class="date-badge">${dayInfo.formattedDate}</span>
+                    ${dayNames[dayName]}
+                    <span class="date-badge">${formattedDate}</span>
                 </h3>
         `;
         
