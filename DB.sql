@@ -1,10 +1,9 @@
-
-
 -- Elimina le tabelle se esistono già (in ordine inverso rispetto alle dipendenze)
 DROP TABLE IF EXISTS Preferiti;
 DROP TABLE IF EXISTS Preferenze_Disponibilita;
 DROP TABLE IF EXISTS Disponibilita;
 DROP TABLE IF EXISTS Lezioni;
+DROP TABLE IF EXISTS Calendari_Professori;
 DROP TABLE IF EXISTS Professori;
 DROP TABLE IF EXISTS Studenti;
 
@@ -23,9 +22,20 @@ CREATE TABLE `Professori` (
   `password` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `bio` text,
-  `materie` varchar(255) DEFAULT NULL,
-  `google_calendar_link` varchar(255) DEFAULT NULL,
-  `google_calendar_id` varchar(100) DEFAULT NULL
+  `materie` varchar(255) DEFAULT NULL
+);
+
+-- Tabella Calendari_Professori
+CREATE TABLE `Calendari_Professori` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `teacher_email` varchar(100) NOT NULL,
+  `google_calendar_link` varchar(255) NOT NULL,
+  `google_calendar_id` varchar(100) DEFAULT NULL,
+  `nome_calendario` varchar(100) DEFAULT 'Calendario',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `teacher_email` (`teacher_email`),
+  CONSTRAINT `calendari_professori_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE
 );
 
 -- Tabella Lezioni

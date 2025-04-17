@@ -7,10 +7,36 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('pomeriggio_orari').style.display = this.checked ? 'flex' : 'none';
     });
     
+    // Gestione aggiunta di nuovo calendario
+    document.getElementById('addCalendarBtn').addEventListener('click', function() {
+        const calendarsContainer = document.getElementById('calendarsContainer');
+        const calendarItems = calendarsContainer.querySelectorAll('.calendar-item');
+        const newIndex = calendarItems.length;
+        
+        const newCalendarItem = document.createElement('div');
+        newCalendarItem.className = 'calendar-item';
+        newCalendarItem.innerHTML = `
+            <div class="form-group">
+                <label for="calendar_link_${newIndex}">Link iCal Google Calendar:</label>
+                <input type="text" id="calendar_link_${newIndex}" name="calendar_links[]" value="" placeholder="https://calendar.google.com/calendar/ical/..." required>
+                <input type="hidden" name="calendar_ids[]" value="0">
+                <label for="calendar_nome_${newIndex}" class="calendar-name-label">Nome (opzionale):</label>
+                <input type="text" id="calendar_nome_${newIndex}" name="calendar_names[]" value="Calendario" placeholder="Es: Personale, Lavoro, ecc.">
+                <button type="button" class="btn-remove-calendar" onclick="removeCalendarItem(this)">Rimuovi</button>
+            </div>
+        `;
+        
+        calendarsContainer.appendChild(newCalendarItem);
+    });
+    
     document.getElementById('calendarForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const calendarLink = document.getElementById('calendar_link').value;
+        // Raccolta di tutti i link dei calendari
+        const calendarLinks = Array.from(document.getElementsByName('calendar_links[]')).map(input => input.value);
+        const calendarIds = Array.from(document.getElementsByName('calendar_ids[]')).map(input => input.value);
+        const calendarNames = Array.from(document.getElementsByName('calendar_names[]')).map(input => input.value);
+        
         const weekend = document.getElementById('weekend').checked;
         const mattina = document.getElementById('mattina').checked;
         const pomeriggio = document.getElementById('pomeriggio').checked;
@@ -22,8 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const oreDopoEvento = document.getElementById('ore_dopo_evento').value;
         
         // Validazione base
-        if (!calendarLink) {
-            alert('Inserisci il link del tuo Google Calendar');
+        if (calendarLinks.some(link => !link)) {
+            alert('Inserisci il link per tutti i calendari Google');
             return;
         }
         
@@ -43,7 +69,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         const formData = new FormData();
-        formData.append('calendar_link', calendarLink);
+        
+        // Aggiunta dei dati dei calendari
+        calendarLinks.forEach((link, i) => {
+            formData.append('calendar_links[]', link);
+            formData.append('calendar_ids[]', calendarIds[i]);
+            formData.append('calendar_names[]', calendarNames[i]);
+        });
+        
         formData.append('weekend', weekend ? 1 : 0);
         formData.append('mattina', mattina ? 1 : 0);
         formData.append('pomeriggio', pomeriggio ? 1 : 0);
@@ -111,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.disabled = false;
             
             if (data && data.success) {
-                alert('Calendario sincronizzato con successo. Nuove disponibilità generate.');
+                alert('Calendari sincronizzati con successo. Nuove disponibilità generate.');
                 // Reindirizzamento opzionale
                 window.location.href = 'disponibilita.php';
             } else if (data) {
@@ -128,3 +161,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Funzione per rimuovere un elemento calendario
+function removeCalendarItem(button) {
+    const calendarItem = button.closest('.calendar-item');
+    if (calendarItem) {
+        calendarItem.remove();
+    }
+}

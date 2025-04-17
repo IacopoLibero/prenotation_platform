@@ -11,7 +11,13 @@ if (!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'professore') {
 
 // Recupero dei dati
 $teacher_email = $_SESSION['email'];
-$calendar_link = $_POST['calendar_link'];
+
+// Recupero degli array di calendari
+$calendar_links = $_POST['calendar_links'] ?? [];
+$calendar_ids = $_POST['calendar_ids'] ?? [];
+$calendar_names = $_POST['calendar_names'] ?? [];
+
+// Recupero delle preferenze
 $weekend = isset($_POST['weekend']) ? intval($_POST['weekend']) : 0;
 $mattina = isset($_POST['mattina']) ? intval($_POST['mattina']) : 1;
 $pomeriggio = isset($_POST['pomeriggio']) ? intval($_POST['pomeriggio']) : 1;
@@ -20,145 +26,196 @@ $ora_fine_mattina = $_POST['ora_fine_mattina'] ?? '13:00';
 $ora_inizio_pomeriggio = $_POST['ora_inizio_pomeriggio'] ?? '14:00';
 $ora_fine_pomeriggio = $_POST['ora_fine_pomeriggio'] ?? '19:00';
 
-// Aggiungiamo i nuovi parametri
+// Aggiungiamo i parametri di buffer
 $ore_prima_evento = isset($_POST['ore_prima_evento']) ? floatval($_POST['ore_prima_evento']) : 0;
 $ore_dopo_evento = isset($_POST['ore_dopo_evento']) ? floatval($_POST['ore_dopo_evento']) : 0;
 
-// Validazione
-if (empty($calendar_link)) {
+// Validazione base
+if (empty($calendar_links)) {
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Il link del calendario è obbligatorio']);
+    echo json_encode(['success' => false, 'message' => 'Nessun calendario fornito']);
     exit;
 }
 
-// Verifica che il link sia un URL valido
-if (!filter_var($calendar_link, FILTER_VALIDATE_URL)) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Il link del calendario non è valido']);
-    exit;
-}
+// Array per tenere traccia dei calendari inseriti con successo
+$successful_calendars = [];
+$failed_calendars = [];
 
-// Verifica che il link sia accessibile prima di salvarlo
-$accessible = false;
+// Iniziamo una transazione per garantire che tutte le operazioni database vengano eseguite insieme
+$conn->begin_transaction();
 
-// Prova con file_get_contents
-$ctx = stream_context_create(['http' => ['timeout' => 5]]);
-$test_content = @file_get_contents($calendar_link, false, $ctx);
-
-// Se fallisce, prova con cURL
-if ($test_content === false && function_exists('curl_init')) {
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $calendar_link);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    $test_content = curl_exec($ch);
-    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    
-    if ($test_content !== false && $http_code >= 200 && $http_code < 300) {
-        $accessible = true;
-    }
-} else if ($test_content !== false) {
-    $accessible = true;
-}
-
-// Verifica che il contenuto sembri essere un calendario iCal
-if ($accessible && strpos($test_content, 'BEGIN:VCALENDAR') === false) {
-    $accessible = false;
-}
-
-if (!$accessible) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Il calendario non è accessibile o non è nel formato iCal corretto. Verifica che il link sia pubblico e corretto.'
-    ]);
-    exit;
-}
-
-// Estrazione dell'ID del calendario dal link
-$calendar_id = null;
-if (preg_match('/\/([a-zA-Z0-9%@._-]+)\/public\/basic\.ics$/', $calendar_link, $matches)) {
-    $calendar_id = urldecode($matches[1]);
-} else {
-    // Formato più permissivo per supportare più varianti di URL iCal
-    $parts = parse_url($calendar_link);
-    $path_parts = explode('/', $parts['path']);
-    foreach ($path_parts as $part) {
-        if (strpos($part, '@') !== false || (strlen($part) > 10 && preg_match('/[a-z0-9]/i', $part))) {
-            $calendar_id = $part;
-            break;
+try {
+    // Prima rimuoviamo tutti i calendari esistenti che non sono più presenti
+    $existing_calendar_ids = [];
+    foreach ($calendar_ids as $index => $cal_id) {
+        if ($cal_id > 0) {
+            $existing_calendar_ids[] = intval($cal_id);
         }
     }
     
-    if (!$calendar_id) {
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Formato del link calendario non valido. Assicurati di utilizzare il link iCal dal tuo Google Calendar.'
-        ]);
-        exit;
+    // Se ci sono ID esistenti, li escludiamo dalla cancellazione
+    $delete_condition = empty($existing_calendar_ids) ? "" : " AND id NOT IN (" . implode(',', $existing_calendar_ids) . ")";
+    $delete_query = "DELETE FROM Calendari_Professori WHERE teacher_email = ?" . $delete_condition;
+    $stmt = $conn->prepare($delete_query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+
+    // Per ogni calendario fornito
+    foreach ($calendar_links as $index => $calendar_link) {
+        if (empty($calendar_link)) continue;
+        
+        $calendar_id_value = isset($calendar_ids[$index]) ? intval($calendar_ids[$index]) : 0;
+        $calendar_name = isset($calendar_names[$index]) ? $calendar_names[$index] : 'Calendario';
+        
+        // Validazione del link
+        if (!filter_var($calendar_link, FILTER_VALIDATE_URL)) {
+            $failed_calendars[] = ["link" => $calendar_link, "reason" => "URL non valido"];
+            continue;
+        }
+        
+        // Verifica che il link sia accessibile prima di salvarlo
+        $accessible = false;
+
+        // Prova con file_get_contents
+        $ctx = stream_context_create(['http' => ['timeout' => 5]]);
+        $test_content = @file_get_contents($calendar_link, false, $ctx);
+
+        // Se fallisce, prova con cURL
+        if ($test_content === false && function_exists('curl_init')) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $calendar_link);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $test_content = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            
+            if ($test_content !== false && $http_code >= 200 && $http_code < 300) {
+                $accessible = true;
+            }
+        } else if ($test_content !== false) {
+            $accessible = true;
+        }
+
+        // Verifica che il contenuto sembri essere un calendario iCal
+        if ($accessible && strpos($test_content, 'BEGIN:VCALENDAR') === false) {
+            $accessible = false;
+        }
+
+        if (!$accessible) {
+            $failed_calendars[] = ["link" => $calendar_link, "reason" => "Calendario non accessibile o non nel formato iCal"];
+            continue;
+        }
+
+        // Estrazione dell'ID del calendario dal link
+        $google_calendar_id = null;
+        if (preg_match('/\/([a-zA-Z0-9%@._-]+)\/public\/basic\.ics$/', $calendar_link, $matches)) {
+            $google_calendar_id = urldecode($matches[1]);
+        } else {
+            // Formato più permissivo per supportare più varianti di URL iCal
+            $parts = parse_url($calendar_link);
+            $path_parts = explode('/', $parts['path']);
+            foreach ($path_parts as $part) {
+                if (strpos($part, '@') !== false || (strlen($part) > 10 && preg_match('/[a-z0-9]/i', $part))) {
+                    $google_calendar_id = $part;
+                    break;
+                }
+            }
+            
+            if (!$google_calendar_id) {
+                $failed_calendars[] = ["link" => $calendar_link, "reason" => "Formato del link calendario non valido"];
+                continue;
+            }
+        }
+        
+        // Inserisci o aggiorna il calendario
+        if ($calendar_id_value > 0) {
+            // Aggiorna calendario esistente
+            $update_query = "UPDATE Calendari_Professori 
+                            SET google_calendar_link = ?, google_calendar_id = ?, nome_calendario = ? 
+                            WHERE id = ? AND teacher_email = ?";
+            $stmt = $conn->prepare($update_query);
+            $stmt->bind_param("sssss", $calendar_link, $google_calendar_id, $calendar_name, $calendar_id_value, $teacher_email);
+        } else {
+            // Inserisci nuovo calendario
+            $insert_query = "INSERT INTO Calendari_Professori (teacher_email, google_calendar_link, google_calendar_id, nome_calendario) 
+                           VALUES (?, ?, ?, ?)";
+            $stmt = $conn->prepare($insert_query);
+            $stmt->bind_param("ssss", $teacher_email, $calendar_link, $google_calendar_id, $calendar_name);
+        }
+        
+        if ($stmt->execute()) {
+            $successful_calendars[] = $calendar_link;
+        } else {
+            $failed_calendars[] = ["link" => $calendar_link, "reason" => "Errore database: " . $stmt->error];
+        }
     }
-}
 
-// Salvataggio del link del calendario
-$update_query = "UPDATE Professori SET google_calendar_link = ?, google_calendar_id = ? WHERE email = ?";
-$stmt = $conn->prepare($update_query);
-$stmt->bind_param("sss", $calendar_link, $calendar_id, $teacher_email);
-$result = $stmt->execute();
+    // Salvataggio delle preferenze di disponibilità
+    $check_query = "SELECT id FROM Preferenze_Disponibilita WHERE teacher_email = ?";
+    $stmt = $conn->prepare($check_query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-if (!$result) {
+    if ($result->num_rows > 0) {
+        // Aggiorna le preferenze esistenti
+        $update_query = "UPDATE Preferenze_Disponibilita 
+                        SET weekend = ?, mattina = ?, pomeriggio = ?, 
+                            ora_inizio_mattina = ?, ora_fine_mattina = ?,
+                            ora_inizio_pomeriggio = ?, ora_fine_pomeriggio = ?,
+                            ore_prima_evento = ?, ore_dopo_evento = ?
+                        WHERE teacher_email = ?";
+        $stmt = $conn->prepare($update_query);
+        $stmt->bind_param("iiissssdds", $weekend, $mattina, $pomeriggio, 
+                        $ora_inizio_mattina, $ora_fine_mattina, 
+                        $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
+                        $ore_prima_evento, $ore_dopo_evento,
+                        $teacher_email);
+    } else {
+        // Inserisce nuove preferenze
+        $insert_query = "INSERT INTO Preferenze_Disponibilita 
+                        (teacher_email, weekend, mattina, pomeriggio, 
+                        ora_inizio_mattina, ora_fine_mattina, 
+                        ora_inizio_pomeriggio, ora_fine_pomeriggio,
+                        ore_prima_evento, ore_dopo_evento)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($insert_query);
+        $stmt->bind_param("siisssssdd", $teacher_email, $weekend, $mattina, $pomeriggio, 
+                        $ora_inizio_mattina, $ora_fine_mattina, 
+                        $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
+                        $ore_prima_evento, $ore_dopo_evento);
+    }
+
+    if (!$stmt->execute()) {
+        throw new Exception('Errore nel salvare le preferenze: ' . $stmt->error);
+    }
+
+    // Commit della transazione
+    $conn->commit();
+
+    // Preparazione della risposta
+    $response = ['success' => true];
+    
+    if (!empty($failed_calendars)) {
+        $response['message'] = 'Alcuni calendari non sono stati salvati. Verificali e riprova.';
+        $response['failed_calendars'] = $failed_calendars;
+    } else {
+        $response['message'] = 'Preferenze salvate con successo';
+    }
+
     header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Errore nel salvare il link del calendario: ' . $stmt->error]);
-    exit;
-}
+    echo json_encode($response);
 
-// Salvataggio delle preferenze di disponibilità
-$check_query = "SELECT id FROM Preferenze_Disponibilita WHERE teacher_email = ?";
-$stmt = $conn->prepare($check_query);
-$stmt->bind_param("s", $teacher_email);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows > 0) {
-    // Aggiorna le preferenze esistenti
-    $update_query = "UPDATE Preferenze_Disponibilita 
-                     SET weekend = ?, mattina = ?, pomeriggio = ?, 
-                         ora_inizio_mattina = ?, ora_fine_mattina = ?,
-                         ora_inizio_pomeriggio = ?, ora_fine_pomeriggio = ?,
-                         ore_prima_evento = ?, ore_dopo_evento = ?
-                     WHERE teacher_email = ?";
-    $stmt = $conn->prepare($update_query);
-    $stmt->bind_param("iiissssdds", $weekend, $mattina, $pomeriggio, 
-                     $ora_inizio_mattina, $ora_fine_mattina, 
-                     $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
-                     $ore_prima_evento, $ore_dopo_evento,
-                     $teacher_email);
-} else {
-    // Inserisce nuove preferenze
-    $insert_query = "INSERT INTO Preferenze_Disponibilita 
-                    (teacher_email, weekend, mattina, pomeriggio, 
-                     ora_inizio_mattina, ora_fine_mattina, 
-                     ora_inizio_pomeriggio, ora_fine_pomeriggio,
-                     ore_prima_evento, ore_dopo_evento)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insert_query);
-    $stmt->bind_param("siisssssdd", $teacher_email, $weekend, $mattina, $pomeriggio, 
-                     $ora_inizio_mattina, $ora_fine_mattina, 
-                     $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
-                     $ore_prima_evento, $ore_dopo_evento);
-}
-
-if ($stmt->execute()) {
+} catch (Exception $e) {
+    // Se c'è un errore, facciamo rollback della transazione
+    $conn->rollback();
+    
     header('Content-Type: application/json');
-    echo json_encode(['success' => true, 'message' => 'Preferenze salvate con successo']);
-} else {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Errore nel salvare le preferenze: ' . $stmt->error]);
+    echo json_encode(['success' => false, 'message' => 'Errore: ' . $e->getMessage()]);
 }
 
-$stmt->close();
 $conn->close();
 ?>

@@ -16,14 +16,16 @@ $stmt->execute();
 $result = $stmt->get_result();
 $preferences = $result->num_rows > 0 ? $result->fetch_assoc() : null;
 
-// Recupera il link di calendario Google già salvato
-$query = "SELECT google_calendar_link FROM Professori WHERE email = ?";
+// Recupera tutti i calendari Google già salvati per questo professore
+$query = "SELECT id, google_calendar_link, nome_calendario FROM Calendari_Professori WHERE teacher_email = ? ORDER BY id";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $email);
 $stmt->execute();
 $result = $stmt->get_result();
-$row = $result->fetch_assoc();
-$calendar_link = $row['google_calendar_link'] ?? '';
+$calendari = [];
+while ($row = $result->fetch_assoc()) {
+    $calendari[] = $row;
+}
 ?>
 
 <!DOCTYPE html>
@@ -65,7 +67,7 @@ $calendar_link = $row['google_calendar_link'] ?? '';
             
             <div class="calendar-section">
                 <div class="form-container">
-                    <h2 class="form-title">Collega il tuo calendario Google</h2>
+                    <h2 class="form-title">Collega i tuoi calendari Google</h2>
                     
                     <div class="info-box">
                         <p>Per collegare il tuo Google Calendar:</p>
@@ -79,10 +81,38 @@ $calendar_link = $row['google_calendar_link'] ?? '';
                     </div>
                     
                     <form id="calendarForm">
-                        <div class="form-group">
-                            <label for="calendar_link">Link iCal Google Calendar:</label>
-                            <input type="text" id="calendar_link" name="calendar_link" value="<?php echo htmlspecialchars($calendar_link); ?>" placeholder="https://calendar.google.com/calendar/ical/..." required>
+                        <div id="calendarsContainer">
+                            <?php if (empty($calendari)): ?>
+                            <!-- Primo calendario (sempre presente) -->
+                            <div class="calendar-item">
+                                <div class="form-group">
+                                    <label for="calendar_link_0">Link iCal Google Calendar:</label>
+                                    <input type="text" id="calendar_link_0" name="calendar_links[]" value="" placeholder="https://calendar.google.com/calendar/ical/..." required>
+                                    <input type="hidden" name="calendar_ids[]" value="0">
+                                    <label for="calendar_nome_0" class="calendar-name-label">Nome (opzionale):</label>
+                                    <input type="text" id="calendar_nome_0" name="calendar_names[]" value="Calendario" placeholder="Es: Personale, Lavoro, ecc.">
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <!-- Calendari esistenti -->
+                            <?php foreach ($calendari as $index => $calendario): ?>
+                            <div class="calendar-item">
+                                <div class="form-group">
+                                    <label for="calendar_link_<?php echo $index; ?>">Link iCal Google Calendar:</label>
+                                    <input type="text" id="calendar_link_<?php echo $index; ?>" name="calendar_links[]" value="<?php echo htmlspecialchars($calendario['google_calendar_link']); ?>" placeholder="https://calendar.google.com/calendar/ical/..." required>
+                                    <input type="hidden" name="calendar_ids[]" value="<?php echo $calendario['id']; ?>">
+                                    <label for="calendar_nome_<?php echo $index; ?>" class="calendar-name-label">Nome (opzionale):</label>
+                                    <input type="text" id="calendar_nome_<?php echo $index; ?>" name="calendar_names[]" value="<?php echo htmlspecialchars($calendario['nome_calendario']); ?>" placeholder="Es: Personale, Lavoro, ecc.">
+                                    <?php if ($index > 0): ?>
+                                    <button type="button" class="btn-remove-calendar" onclick="removeCalendarItem(this)">Rimuovi</button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
+                        
+                        <button type="button" id="addCalendarBtn" class="btn-secondary">Aggiungi un altro calendario</button>
                         
                         <h3>Preferenze di disponibilità</h3>
                         

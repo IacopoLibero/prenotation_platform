@@ -2,8 +2,8 @@
 // Questo script può essere eseguito come cron job per sincronizzare tutti i calendari
 require_once '../connessione.php';
 
-// Recupera tutti i professori che hanno configurato un calendario Google
-$query = "SELECT email FROM Professori WHERE google_calendar_link IS NOT NULL";
+// Recupera tutti i professori che hanno configurato almeno un calendario Google
+$query = "SELECT DISTINCT teacher_email FROM Calendari_Professori";
 $stmt = $conn->prepare($query);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -12,7 +12,7 @@ $updated = 0;
 $failed = 0;
 
 while ($row = $result->fetch_assoc()) {
-    $teacher_email = $row['email'];
+    $teacher_email = $row['teacher_email'];
     
     // Simula una sessione per il professore
     session_start();

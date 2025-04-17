@@ -16,45 +16,65 @@ try {
     
     $teacher_email = $_SESSION['email'];
     
-    // Recupero informazioni del calendario e preferenze
-    $query = "SELECT p.google_calendar_link, pd.* 
-              FROM Professori p
-              LEFT JOIN Preferenze_Disponibilita pd ON p.email = pd.teacher_email
-              WHERE p.email = ?";
+    // Recupero preferenze di disponibilità
+    $query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $teacher_email);
     $stmt->execute();
     $result = $stmt->get_result();
-    $data = $result->fetch_assoc();
+    $preferences = $result->fetch_assoc();
     
-    if (!$data || empty($data['google_calendar_link'])) {
+    if (!$preferences) {
+        throw new Exception('Nessuna preferenza di disponibilità configurata');
+    }
+    
+    // Recupero tutti i calendari del professore
+    $query = "SELECT * FROM Calendari_Professori WHERE teacher_email = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("s", $teacher_email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows == 0) {
         throw new Exception('Nessun calendario Google configurato');
     }
     
-    // Carica le preferenze dell'utente per l'uso nelle funzioni
-    global $preferences;
-    $preferences = get_teacher_preferences($conn, $teacher_email);
+    // Array per raccogliere tutti gli eventi
+    $all_events = [];
     
-    // Scarica e analizza il calendario
-    $calendar_url = $data['google_calendar_link'];
-    $ical_content = @file_get_contents($calendar_url);
-    if ($ical_content === false) {
-        // Prova con cURL se file_get_contents fallisce
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $calendar_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        $ical_content = curl_exec($ch);
-        curl_close($ch);
+    // Per ogni calendario, scarichiamo e analizziamo gli eventi
+    while ($calendar_data = $result->fetch_assoc()) {
+        $calendar_url = $calendar_data['google_calendar_link'];
+        $ical_content = @file_get_contents($calendar_url);
+        
+        if ($ical_content === false) {
+            // Prova con cURL se file_get_contents fallisce
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $calendar_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            $ical_content = curl_exec($ch);
+            curl_close($ch);
+        }
+        
+        if (!$ical_content) {
+            // Log dell'errore ma continua con gli altri calendari
+            error_log("Impossibile scaricare il calendario: " . $calendar_url);
+            continue;
+        }
+        
+        // Analizza gli eventi dal calendario iCal
+        $events = parse_ical_events($ical_content);
+        
+        // Aggiungi gli eventi all'array combinato
+        $all_events = array_merge($all_events, $events);
     }
     
-    if (!$ical_content) {
-        throw new Exception('Impossibile scaricare il calendario');
+    // Se nessun calendario è stato scaricato correttamente
+    if (empty($all_events)) {
+        throw new Exception('Impossibile scaricare gli eventi dai calendari. Verifica che i link siano corretti e accessibili.');
     }
-    
-    // Analizza gli eventi dal calendario iCal
-    $events = parse_ical_events($ical_content);
     
     // Ottieni le date per cui generare disponibilità
     $now = new DateTime();
@@ -63,7 +83,7 @@ try {
     $dates = generate_dates($now, $end_date, isset($preferences['weekend']) ? $preferences['weekend'] : false);
 
     // Genera disponibilità in base agli eventi trovati
-    $availability = generate_availability($dates, $events, $preferences);
+    $availability = generate_availability($dates, $all_events, $preferences);
     
     // Salva la disponibilità nel database
     $result = save_availability($conn, $teacher_email, $availability);
@@ -165,32 +185,6 @@ function parse_ical_date($date_str) {
     }
 }
 
-// Recupera le preferenze di disponibilità del professore
-function get_teacher_preferences($conn, $teacher_email) {
-    $query = "SELECT * FROM Preferenze_Disponibilita WHERE teacher_email = ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $teacher_email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        return $result->fetch_assoc();
-    } else {
-        // Default preferences
-        return [
-            'weekend' => false,
-            'mattina' => true,
-            'pomeriggio' => true,
-            'ora_inizio_mattina' => '08:00:00',
-            'ora_fine_mattina' => '13:00:00',
-            'ora_inizio_pomeriggio' => '14:00:00',
-            'ora_fine_pomeriggio' => '19:00:00',
-            'ore_prima_evento' => 0,
-            'ore_dopo_evento' => 0
-        ];
-    }
-}
-
 // Generate dates for which availability should be checked
 function generate_dates($start_date, $end_date, $include_weekend = false) {
     $dates = [];
@@ -268,7 +262,7 @@ function generate_availability($dates, $events, $preferences) {
                     ];
                     
                     // Only add if slot is not occupied
-                    if (!is_slot_occupied($date_str, $slot, $events)) {
+                    if (!is_slot_occupied($date_str, $slot, $events, $preferences)) {
                         $availability[] = $slot;
                         $day_slots++;
                         $slots_by_day[$day_name]++;
@@ -310,7 +304,7 @@ function generate_availability($dates, $events, $preferences) {
                     ];
                     
                     // Only add if slot is not occupied
-                    if (!is_slot_occupied($date_str, $slot, $events)) {
+                    if (!is_slot_occupied($date_str, $slot, $events, $preferences)) {
                         $availability[] = $slot;
                         $day_slots++;
                         $slots_by_day[$day_name]++;
@@ -325,23 +319,15 @@ function generate_availability($dates, $events, $preferences) {
     return $availability;
 }
 
-// Fix is_slot_occupied function to handle date_str consistently
-function is_slot_occupied($date_str, $slot, $events) {
-    global $preferences; // Accede alle preferenze dell'utente
-    
-    // Get day name for logging
-    $day_name = $slot['giorno_settimana'];
+// Funzione aggiornata per controllare se uno slot è occupato
+function is_slot_occupied($date_str, $slot, $events, $preferences) {
+    // Recupera i buffer di tempo dalle preferenze
+    $buffer_before = isset($preferences['ore_prima_evento']) ? floatval($preferences['ore_prima_evento']) : 0;
+    $buffer_after = isset($preferences['ore_dopo_evento']) ? floatval($preferences['ore_dopo_evento']) : 0;
     
     // Create precise time objects for slot
     $slot_start = new DateTime($date_str . ' ' . $slot['ora_inizio'] . ':00');
     $slot_end = new DateTime($date_str . ' ' . $slot['ora_fine'] . ':00');
-    
-    // Debug variables to track processing
-    $events_on_this_day = 0;
-    
-    // Recupera i buffer di tempo dalle preferenze
-    $buffer_before = isset($preferences['ore_prima_evento']) ? floatval($preferences['ore_prima_evento']) : 0;
-    $buffer_after = isset($preferences['ore_dopo_evento']) ? floatval($preferences['ore_dopo_evento']) : 0;
     
     // Controlla tutti gli eventi
     foreach ($events as $event) {
@@ -350,19 +336,15 @@ function is_slot_occupied($date_str, $slot, $events) {
             continue;
         }
         
-        $event_summary = $event['summary'] ?? 'Untitled event';
         $event_start = $event['start'];
         $event_end = $event['end'];
         
         // Check if event date matches the slot date
-        $event_date = $event_start->format('Y-m-d');
         $event_start_date = $event_start->format('Y-m-d');
         $event_end_date = $event_end->format('Y-m-d');
         
         // If the event spans this date or is on this date
         if ($event_start_date <= $date_str && $event_end_date >= $date_str) {
-            $events_on_this_day++;
-            
             // Create datetime objects with boundaries for the current day
             $check_start = clone $event_start;
             $check_end = clone $event_end;
@@ -401,23 +383,11 @@ function is_slot_occupied($date_str, $slot, $events) {
     return false; // Slot is free
 }
 
-// Enhanced save_availability function to track and verify saved slots by date AND day
+// Funzione per salvare le disponibilità nel database
 function save_availability($conn, $teacher_email, $availability) {
     if (empty($availability)) {
         return true;
     }
-    
-    // Track slots saved by day of week AND date to detect anomalies
-    $saved_by_day = [
-        'lunedi' => 0,
-        'martedi' => 0,
-        'mercoledi' => 0,
-        'giovedi' => 0,
-        'venerdi' => 0,
-        'sabato' => 0,
-        'domenica' => 0
-    ];
-    $saved_by_date = [];
     
     // 1. Elimina le lezioni disponibili esistenti basate su Google Calendar
     $delete_query = "DELETE FROM Lezioni 
@@ -437,12 +407,6 @@ function save_availability($conn, $teacher_email, $availability) {
     
     foreach ($availability as $slot) {
         $date_str = $slot['data'];
-        $day_name = $slot['giorno_settimana'];
-        
-        // Tieni traccia delle date e giorni
-        if (!isset($saved_by_date[$date_str])) {
-            $saved_by_date[$date_str] = 0;
-        }
         
         // Converti in datetime per DB
         $start_time_str = $date_str . ' ' . $slot['ora_inizio'] . ':00';
@@ -453,9 +417,6 @@ function save_availability($conn, $teacher_email, $availability) {
         
         if (!$lesson_stmt->execute()) {
             $success = false;
-        } else {
-            $saved_by_day[$day_name]++;
-            $saved_by_date[$date_str]++;
         }
     }
     
