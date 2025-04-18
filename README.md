@@ -101,9 +101,8 @@ Per contribuire al progetto:
 Questo progetto è distribuito con licenza [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). Vedere il file [`LICENSE`](./LICENSE.md) per maggiori informazioni.
 
 
-## roadmap per domani
+https://developers.google.com/workspace/calendar/api/guides/overview
 
-- navbar da sistemare 
-- implementare lezioni di gruppo
-- professore -> report da sistemare
-- tour generale per verificare il corretto funzionamento
+sei un senior developer,volevo integrare la sincronizzazione con google calendar per poter aggiungere un evento al calendario del professore e dello studente quando uno studente prenota una lezione
+
+prima di iniziare fammi delle domande per capire cosa voglio
