@@ -1,47 +1,55 @@
 <?php
-// Funzione di supporto per leggere le variabili d'ambiente o le variabili server
-function getConfigValue($name) {
-    // Prova a leggere da getenv()
+// Funzione per leggere variabili d'ambiente su Altervista
+// Si tenta di leggere le variabili in diversi modi per compatibilità massima
+function getEnvVariable($name) {
+    // Prima prova getenv standard
     $value = getenv($name);
-    
-    // Se non funziona, prova da $_SERVER
-    if ($value === false || empty($value)) {
-        $serverKey = 'HTTP_' . strtoupper($name);
-        if (isset($_SERVER[$serverKey])) {
-            return $_SERVER[$serverKey];
-        }
-        
-        // Prova anche senza il prefisso HTTP_
-        if (isset($_SERVER[$name])) {
-            return $_SERVER[$name];
-        }
+    if ($value !== false && !empty($value)) {
+        return $value;
     }
-    // Valori hardcoded di fallback, da usare solo in development!
-    if (empty($value)) {
-        $fallbacks = [
-            'GOOGLE_CLIENT_ID' => '923285606051-5thgtbget0v09n7h6tan2q7udhol05g6.apps.googleusercontent.com',
-            'GOOGLE_CLIENT_SECRET' => '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',
-            'GOOGLE_PROJECT_ID' => 'superipetizioni',
-            'GOOGLE_REDIRECT_URI' => 'https://superipetizioni.altervista.org/google_calendar/google_oauth_callback.php'
-        ];
-        
-        if (isset($fallbacks[$name])) {
-            return $fallbacks[$name];
+    
+    // Poi prova apache_getenv se disponibile (spesso su hosting condivisi)
+    if (function_exists('apache_getenv')) {
+        $value = apache_getenv($name);
+        if ($value !== false && !empty($value)) {
+            return $value;
         }
     }
     
-    return $value;
+    // Prova $_SERVER che su alcuni hosting contiene le variabili d'ambiente
+    if (isset($_SERVER[$name])) {
+        return $_SERVER[$name];
+    }
+    
+    // Su Altervista e altri hosting, le variabili d'ambiente potrebbero essere in $_ENV
+    if (isset($_ENV[$name])) {
+        return $_ENV[$name];
+    }
+    
+    // Infine, leggi direttamente dal file .htaccess come fallback
+    // Questo è l'ultimo tentativo e meno sicuro, ma potrebbe funzionare su Altervista
+    $htaccessPath = __DIR__ . '/../.htaccess';
+    if (file_exists($htaccessPath) && is_readable($htaccessPath)) {
+        $htaccess = file_get_contents($htaccessPath);
+        $pattern = '/SetEnv\s+' . preg_quote($name) . '\s+([^\s]+)/i';
+        if (preg_match($pattern, $htaccess, $matches)) {
+            return $matches[1];
+        }
+    }
+    
+    // Se proprio non si trova il valore, ritorna una stringa vuota
+    return '';
 }
 
 // Configurazione client Google
 $googleClientConfig = [
-    'client_id' => getConfigValue('GOOGLE_CLIENT_ID'),
-    'client_secret' => getConfigValue('GOOGLE_CLIENT_SECRET'),
-    'redirect_uri' => getConfigValue('GOOGLE_REDIRECT_URI'),
+    'client_id' => getEnvVariable('GOOGLE_CLIENT_ID'),
+    'client_secret' => getEnvVariable('GOOGLE_CLIENT_SECRET'),
+    'redirect_uri' => getEnvVariable('GOOGLE_REDIRECT_URI'),
     'auth_uri' => 'https://accounts.google.com/o/oauth2/auth',
     'token_uri' => 'https://oauth2.googleapis.com/token',
     'auth_provider_x509_cert_url' => 'https://www.googleapis.com/oauth2/v1/certs',
-    'project_id' => getConfigValue('GOOGLE_PROJECT_ID'),
+    'project_id' => getEnvVariable('GOOGLE_PROJECT_ID'),
     'scopes' => ['https://www.googleapis.com/auth/calendar'] // Accesso completo a Google Calendar
 ];
 
