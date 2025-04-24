@@ -6,7 +6,7 @@ require_once __DIR__ . '/token_storage.php';
 
 // Verifica che l'utente sia autenticato
 if (!isset($_SESSION['oauth_user_email']) || !isset($_SESSION['oauth_user_type'])) {
-    header('Location: /login/login.php');
+    header('Location: ../index.php');
     exit('Sessione non valida');
 }
 
@@ -16,19 +16,19 @@ $userType = $_SESSION['oauth_user_type'];
 
 // Controlla se è presente un errore nella risposta
 if (isset($_GET['error'])) {
-    header('Location: /front-end/google_calendar_setup.php?status=auth_error&message=' . urlencode($_GET['error']));
+    header('Location: ../front-end/google_calendar_setup.php?status=auth_error&message=' . urlencode($_GET['error']));
     exit;
 }
 
 // Verifica il parametro di stato per prevenire attacchi CSRF
 if (!isset($_GET['state']) || !isset($_SESSION['oauth_state']) || $_GET['state'] !== $_SESSION['oauth_state']) {
-    header('Location: /front-end/google_calendar_setup.php?status=auth_error&message=invalid_state');
+    header('Location: ../front-end/google_calendar_setup.php?status=auth_error&message=invalid_state');
     exit('Errore di validazione stato');
 }
 
 // Verifica che sia presente il codice di autorizzazione
 if (!isset($_GET['code'])) {
-    header('Location: /front-end/google_calendar_setup.php?status=auth_error&message=no_code');
+    header('Location: ../front-end/google_calendar_setup.php?status=auth_error&message=no_code');
     exit('Codice di autorizzazione mancante');
 }
 
@@ -42,7 +42,7 @@ try {
     // Verifica se c'è stato un errore nel recupero del token
     if (isset($token['error'])) {
         error_log("Errore nel recupero del token: " . $token['error_description']);
-        header('Location: /front-end/google_calendar_setup.php?status=token_error&message=' . urlencode($token['error']));
+        header('Location: ../front-end/google_calendar_setup.php?status=token_error&message=' . urlencode($token['error']));
         exit;
     }
     
@@ -60,14 +60,14 @@ try {
     
     if ($success) {
         // Reindirizza alla pagina di configurazione con successo
-        header('Location: /front-end/google_calendar_setup.php?status=success');
+        header('Location: ../front-end/google_calendar_setup.php?status=success');
     } else {
         // Errore nel salvataggio dei token
-        header('Location: /front-end/google_calendar_setup.php?status=db_error');
+        header('Location: ../front-end/google_calendar_setup.php?status=db_error');
     }
     
 } catch (Exception $e) {
     error_log("Errore nell'OAuth callback: " . $e->getMessage());
-    header('Location: /front-end/google_calendar_setup.php?status=error&message=' . urlencode($e->getMessage()));
+    header('Location: ../front-end/google_calendar_setup.php?status=error&message=' . urlencode($e->getMessage()));
 }
 ?>

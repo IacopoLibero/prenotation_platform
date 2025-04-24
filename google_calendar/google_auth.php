@@ -6,7 +6,7 @@ require_once __DIR__ . '/token_storage.php';
 
 // Verifica se l'utente è autenticato nel sito
 if (!isset($_SESSION['user'])) {
-    header('Location: /login/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    header('Location: ../index.php');
     exit;
 }
 
@@ -24,7 +24,7 @@ if ($userType === 'teacher') {
 // Verifica se l'utente ha già autorizzato Google Calendar
 if (hasValidOAuthTokens($userEmail, $userType)) {
     // L'utente ha già autorizzato, reindirizza alla pagina di gestione
-    header('Location: /front-end/google_calendar_setup.php?status=already_authorized');
+    header('Location: ../front-end/google_calendar_setup.php?status=already_authorized');
     exit;
 }
 
