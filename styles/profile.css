@@ -192,6 +192,78 @@ section {
     text-align: center;
 }
 
+/* Google Calendar Section */
+.google-calendar-status {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.status-badge i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.status-badge.connected {
+    background-color: #4caf50;
+    color: white;
+}
+
+.status-badge.disconnected {
+    background-color: #f44336;
+    color: white;
+}
+
+.calendar-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-primary {
+    display: inline-block;
+    background-color: #2da0a8;
+    color: white;
+    text-decoration: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #238e95;
+}
+
+.btn-danger {
+    display: inline-block;
+    background-color: #f44336;
+    color: white;
+    text-decoration: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 5px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background-color: #d32f2f;
+}
+
 /* Footer */
 footer {
     background-color: #2da0a8;

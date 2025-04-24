@@ -1,4 +1,5 @@
 -- Elimina le tabelle se esistono già (in ordine inverso rispetto alle dipendenze)
+DROP TABLE IF EXISTS OAuth_Tokens;
 DROP TABLE IF EXISTS Preferiti;
 DROP TABLE IF EXISTS Preferenze_Disponibilita;
 DROP TABLE IF EXISTS Disponibilita;
@@ -23,6 +24,20 @@ CREATE TABLE `Professori` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `bio` text,
   `materie` varchar(255) DEFAULT NULL
+);
+
+-- Tabella OAuth_Tokens
+CREATE TABLE `OAuth_Tokens` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_email` varchar(100) NOT NULL,
+  `user_type` enum('professore','studente') NOT NULL,
+  `access_token` text,
+  `refresh_token` text,
+  `expiry_date` datetime,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_email` (`user_email`, `user_type`)
 );
 
 -- Tabella Calendari_Professori
@@ -128,10 +143,17 @@ ALTER TABLE `Preferenze_Disponibilita`
 ALTER TABLE `Preferiti`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
+ALTER TABLE `OAuth_Tokens`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+
 -- Vincoli di chiave esterna
 ALTER TABLE `Lezioni`
   ADD CONSTRAINT `lezioni_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE,
   ADD CONSTRAINT `lezioni_ibfk_2` FOREIGN KEY (`student_email`) REFERENCES `Studenti` (`email`) ON DELETE SET NULL;
+
+ALTER TABLE `OAuth_Tokens`
+  ADD CONSTRAINT `oauth_tokens_professori_fk` FOREIGN KEY (`user_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE,
+  ADD CONSTRAINT `oauth_tokens_studenti_fk` FOREIGN KEY (`user_email`) REFERENCES `Studenti` (`email`) ON DELETE CASCADE;
 
 ALTER TABLE `Disponibilita`
   ADD CONSTRAINT `disponibilita_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE;

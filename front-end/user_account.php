@@ -5,6 +5,14 @@
     }
     
     $isTeacher = ($_SESSION['tipo'] === 'professore');
+    
+    // Includi le funzioni per verificare lo stato di connessione con Google Calendar
+    require_once '../google_calendar/token_storage.php';
+    
+    // Verifica se l'utente ha già collegato Google Calendar
+    $userEmail = $_SESSION['email'];
+    $userType = $isTeacher ? 'professore' : 'studente';
+    $hasGoogleCalendar = hasValidOAuthTokens($userEmail, $userType);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -16,6 +24,8 @@
     <title>Account Utente</title>
     <!-- Include ad handler script -->
     <script src="../js/ad-handler.js?v=<?php echo time(); ?>"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <header>
@@ -84,6 +94,31 @@
                 
                 <button type="submit" class="btn-update">Aggiorna Profilo</button>
             </form>
+        </section>
+        
+        <!-- Sezione Google Calendar -->
+        <section class="account-info">
+            <h2>Google Calendar</h2>
+            <div class="google-calendar-status">
+                <?php if ($hasGoogleCalendar): ?>
+                    <div class="status-badge connected">
+                        <i class="fas fa-check-circle"></i> Google Calendar Collegato
+                    </div>
+                    <p>Il tuo account è collegato con Google Calendar.</p>
+                    <div class="calendar-actions">
+                        <a href="google_calendar_setup.php" class="btn-feature">Gestisci Calendario</a>
+                        <button id="btn-revoke-access" class="btn-danger">Revoca Accesso</button>
+                    </div>
+                <?php else: ?>
+                    <div class="status-badge disconnected">
+                        <i class="fas fa-times-circle"></i> Google Calendar Non Collegato
+                    </div>
+                    <p>Collega il tuo account con Google Calendar per sincronizzare le tue lezioni.</p>
+                    <div class="calendar-actions">
+                        <a href="../google_calendar/google_auth.php" class="btn-primary">Collega Google Calendar</a>
+                    </div>
+                <?php endif; ?>
+            </div>
         </section>
         
         <?php if($isTeacher): ?>

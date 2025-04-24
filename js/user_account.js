@@ -26,6 +26,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Google Calendar "Revoca Accesso" button
+    const revokeBtn = document.getElementById('btn-revoke-access');
+    if (revokeBtn) {
+        revokeBtn.addEventListener('click', function() {
+            if (confirm('Sei sicuro di voler revocare l\'accesso a Google Calendar? Questa operazione rimuoverà la connessione tra il tuo account e Google Calendar.')) {
+                revokeGoogleCalendarAccess();
+            }
+        });
+    }
 });
 
 /**
@@ -36,4 +46,30 @@ document.addEventListener('DOMContentLoaded', function() {
 function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
+}
+
+/**
+ * Revoca l'accesso a Google Calendar
+ */
+function revokeGoogleCalendarAccess() {
+    fetch('../api/sync_google_calendar.php?action=revoke', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Accesso a Google Calendar revocato con successo');
+            // Ricarica la pagina per aggiornare lo stato
+            window.location.reload();
+        } else {
+            alert('Errore durante la revoca dell\'accesso: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Errore:', error);
+        alert('Si è verificato un errore durante la comunicazione con il server');
+    });
 }
