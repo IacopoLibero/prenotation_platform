@@ -101,9 +101,13 @@ Per contribuire al progetto:
 Questo progetto è distribuito con licenza [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). Vedere il file [`LICENSE`](./LICENSE.md) per maggiori informazioni.
 
 
-## roadmap per domani
+## roadmap di cose da fare
 
-- navbar da sistemare 
-- implementare lezioni di gruppo
-- professore -> report da sistemare
-- tour generale per verificare il corretto funzionamento
+- non deve essere preso solo un calendario ma tutti quelli dell'account collegato
+- quando un professore o studente deve vedere le diponbilità vengono visualizzate dinamicamente, quindi calcolate e riprese direttemente dai calendari
+    - deve esserci un bottone disponibile solo per lo studente per ogni fascia oraria che al clik crea l'evento sia per il professore che per lo studente sul calendsario e lo salvi sul database nella tabella lezioni per avere un trak delle lezioni fatte 
+    - allo stesso modo quando si emimina una lezione, sia per lo studente che per il professore deve sparire dal calendario
+- si devonno poter impostare le preferenze sui giorni di disponibilità per esempio weekend non disponibile mai
+- da continuare con quallo che viene in mente
+
+
