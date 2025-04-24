@@ -38,7 +38,7 @@ if ($isTeacher) {
     $query = "SELECT google_calendar_id, nome_calendario, ore_prima_evento, ore_dopo_evento 
               FROM Calendari_Professori 
               WHERE teacher_email = ?";
-    $stmt = $connessione->prepare($query);
+    $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $userEmail);
     $stmt->execute();
     $result = $stmt->get_result();

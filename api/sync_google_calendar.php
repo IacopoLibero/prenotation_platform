@@ -48,7 +48,7 @@ try {
                     $query = "UPDATE Calendari_Professori SET 
                               google_calendar_id = NULL 
                               WHERE teacher_email = ?";
-                    $stmt = $connessione->prepare($query);
+                    $stmt = $conn->prepare($query);
                     $stmt->bind_param("s", $userEmail);
                     $stmt->execute();
                 }

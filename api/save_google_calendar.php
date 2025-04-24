@@ -56,7 +56,7 @@ try {
     if ($userType === 'professore') {
         // Per i professori, aggiorna o inserisci nella tabella Calendari_Professori
         $query = "SELECT id FROM Calendari_Professori WHERE teacher_email = ?";
-        $stmt = $connessione->prepare($query);
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $userEmail);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -69,7 +69,7 @@ try {
                       ore_prima_evento = ?, 
                       ore_dopo_evento = ? 
                       WHERE teacher_email = ?";
-            $stmt = $connessione->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bind_param("ssdds", $calendarId, $calendarName, $hoursBeforeEvent, $hoursAfterEvent, $userEmail);
         } else {
             // Inserisci un nuovo calendario
@@ -77,7 +77,7 @@ try {
                       (teacher_email, google_calendar_link, google_calendar_id, nome_calendario, ore_prima_evento, ore_dopo_evento) 
                       VALUES (?, ?, ?, ?, ?, ?)";
             $calendarLink = "https://calendar.google.com/calendar/embed?src=" . urlencode($calendarId);
-            $stmt = $connessione->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bind_param("ssssdd", $userEmail, $calendarLink, $calendarId, $calendarName, $hoursBeforeEvent, $hoursAfterEvent);
         }
         
@@ -92,7 +92,7 @@ try {
             ]);
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Errore nel salvare la configurazione: ' . $connessione->error]);
+            echo json_encode(['success' => false, 'message' => 'Errore nel salvare la configurazione: ' . $conn->error]);
         }
     } else {
         // Per gli studenti, al momento non è richiesta alcuna tabella specifica

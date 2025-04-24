@@ -12,7 +12,13 @@ require_once __DIR__ . '/../connessione.php';
  * @return bool Successo dell'operazione
  */
 function saveOAuthTokens($userEmail, $userType, $accessToken, $refreshToken = null, $expiryTimestamp = null) {
-    global $connessione;
+    global $conn; // Usa $conn invece di $connessione
+    
+    // Verifica che la connessione al database sia stabilita
+    if (!$conn) {
+        error_log("Errore: Connessione al database non disponibile in saveOAuthTokens");
+        return false;
+    }
     
     try {
         // Formatta la data di scadenza
@@ -23,7 +29,7 @@ function saveOAuthTokens($userEmail, $userType, $accessToken, $refreshToken = nu
         
         // Controlla se esiste già un record per questo utente
         $checkQuery = "SELECT id FROM OAuth_Tokens WHERE user_email = ? AND user_type = ?";
-        $stmt = $connessione->prepare($checkQuery);
+        $stmt = $conn->prepare($checkQuery);
         $stmt->bind_param("ss", $userEmail, $userType);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -52,13 +58,13 @@ function saveOAuthTokens($userEmail, $userType, $accessToken, $refreshToken = nu
             $params[] = $userEmail;
             $params[] = $userType;
             
-            $stmt = $connessione->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bind_param(...$params);
             
         } else {
             // Inserisci un nuovo record
             $query = "INSERT INTO OAuth_Tokens (user_email, user_type, access_token, refresh_token, expiry_date) VALUES (?, ?, ?, ?, ?)";
-            $stmt = $connessione->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bind_param("sssss", $userEmail, $userType, $accessToken, $refreshToken, $expiryDate);
         }
         
@@ -78,11 +84,17 @@ function saveOAuthTokens($userEmail, $userType, $accessToken, $refreshToken = nu
  * @return array|null Array con i token o null se non trovati
  */
 function getOAuthTokens($userEmail, $userType) {
-    global $connessione;
+    global $conn; // Usa $conn invece di $connessione
+    
+    // Verifica che la connessione al database sia stabilita
+    if (!$conn) {
+        error_log("Errore: Connessione al database non disponibile in getOAuthTokens");
+        return null;
+    }
     
     try {
         $query = "SELECT access_token, refresh_token, expiry_date FROM OAuth_Tokens WHERE user_email = ? AND user_type = ?";
-        $stmt = $connessione->prepare($query);
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("ss", $userEmail, $userType);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -119,11 +131,17 @@ function getOAuthTokens($userEmail, $userType) {
  * @return bool Successo dell'operazione
  */
 function deleteOAuthTokens($userEmail, $userType) {
-    global $connessione;
+    global $conn; // Usa $conn invece di $connessione
+    
+    // Verifica che la connessione al database sia stabilita
+    if (!$conn) {
+        error_log("Errore: Connessione al database non disponibile in deleteOAuthTokens");
+        return false;
+    }
     
     try {
         $query = "DELETE FROM OAuth_Tokens WHERE user_email = ? AND user_type = ?";
-        $stmt = $connessione->prepare($query);
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("ss", $userEmail, $userType);
         return $stmt->execute();
         
