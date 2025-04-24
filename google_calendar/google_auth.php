@@ -5,13 +5,14 @@ require_once __DIR__ . '/google_config.php';
 require_once __DIR__ . '/token_storage.php';
 
 // Verifica se l'utente è autenticato nel sito
-if (!isset($_SESSION['user_email']) || !isset($_SESSION['user_type'])) {
+if (!isset($_SESSION['user'])) {
     header('Location: /login/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
     exit;
 }
 
-$userEmail = $_SESSION['user_email'];
-$userType = $_SESSION['user_type'];
+// Utilizza le chiavi di sessione corrette
+$userEmail = $_SESSION['email'];
+$userType = $_SESSION['tipo'];
 
 // Converti il tipo utente per il nostro sistema (se necessario)
 if ($userType === 'teacher') {
