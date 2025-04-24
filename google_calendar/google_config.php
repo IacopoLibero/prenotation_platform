@@ -17,20 +17,6 @@ function getConfigValue($name) {
         }
     }
     
-    // Valori hardcoded di fallback, da usare solo in development!
-    if (empty($value)) {
-        $fallbacks = [
-            'GOOGLE_CLIENT_ID' => '923285606051-5thgtbget0v09n7h6tan2q7udhol05g6.apps.googleusercontent.com',
-            'GOOGLE_CLIENT_SECRET' => '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',
-            'GOOGLE_PROJECT_ID' => 'superipetizioni',
-            'GOOGLE_REDIRECT_URI' => 'https://superipetizioni.altervista.org/google_calendar/google_oauth_callback.php'
-        ];
-        
-        if (isset($fallbacks[$name])) {
-            return $fallbacks[$name];
-        }
-    }
-    
     return $value;
 }
 

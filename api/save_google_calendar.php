@@ -5,14 +5,14 @@ require_once '../connessione.php';
 require_once '../google_calendar/calendar_functions.php';
 
 // Verifica se l'utente è autenticato
-if (!isset($_SESSION['user_email']) || !isset($_SESSION['user_type'])) {
+if (!isset($_SESSION['email']) || !isset($_SESSION['tipo'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Utente non autenticato']);
     exit;
 }
 
-$userEmail = $_SESSION['user_email'];
-$userType = $_SESSION['user_type'];
+$userEmail = $_SESSION['email'];
+$userType = $_SESSION['tipo'];
 
 // Converti il tipo utente se necessario
 if ($userType === 'teacher') {
