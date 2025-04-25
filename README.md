@@ -103,11 +103,15 @@ Questo progetto è distribuito con licenza [Creative Commons Attribution-NonComm
 
 ## roadmap di cose da fare
 
-- non deve essere preso solo un calendario ma tutti quelli dell'account collegato
-- quando un professore o studente deve vedere le diponbilità vengono visualizzate dinamicamente, quindi calcolate e riprese direttemente dai calendari
-    - deve esserci un bottone disponibile solo per lo studente per ogni fascia oraria che al clik crea l'evento sia per il professore che per lo studente sul calendsario e lo salvi sul database nella tabella lezioni per avere un trak delle lezioni fatte 
-    - allo stesso modo quando si emimina una lezione, sia per lo studente che per il professore deve sparire dal calendario
+- non deve essere preso solo un calendario ma tutti quelli dell'account collegato e poi settate le preferenze per ognuno
+- quando un professore o studente deve vedere le diponbilità vengono visualizzate dinamicamente, quindi calcolate e riprese direttemente dai calendari e non dal db
+    - deve esserci un bottone disponibile solo per lo studente per ogni fascia oraria disponibike che al clik crea l'evento sia per il professore che per lo studente sul calendsario e lo salvi sul database nella tabella lezioni per avere un trak delle lezioni fatte 
+    - allo stesso modo quando si emimina una lezione, (o dal calendario o dalla piattaforma)sia per lo studente che per il professore deve essere eliminato dal calendario e database
 - si devonno poter impostare le preferenze sui giorni di disponibilità per esempio weekend non disponibile mai
-- da continuare con quallo che viene in mente
+- quando viene prenotata la lezione l'evento nei calendari del prof e studente deve avere questa formattazione:
+    - nome "lezione con [nomeprofessore/nomestudente]"
+    - notifica dal calendario 30 minuti prima 
+    - link a google meet generato ma valido
+    - note con "lezione prenotata con[link del sito]
 
 
