@@ -28,6 +28,7 @@ $calendars = $calendarsResponse['success'] ? $calendarsResponse['data'] : [];
 
 // Array per i calendari collegati
 $linkedCalendars = [];
+$calendario_selezionato_id = null;
 
 // Per i professori, recupera le informazioni sui calendari collegati
 if ($isTeacher) {
@@ -50,7 +51,7 @@ if ($isTeacher) {
     // Recupera anche le preferenze di disponibilità
     $query_pref = "SELECT weekend, mattina, pomeriggio, 
                    ora_inizio_mattina, ora_fine_mattina, 
-                   ora_inizio_pomeriggio, ora_fine_pomeriggio
+                   ora_inizio_pomeriggio, ora_fine_pomeriggio, calendario_selezionato_id
                    FROM Preferenze_Disponibilita 
                    WHERE teacher_email = ?";
     $stmt_pref = $conn->prepare($query_pref);
@@ -60,6 +61,7 @@ if ($isTeacher) {
     
     if ($result_pref->num_rows > 0) {
         $preferences = $result_pref->fetch_assoc();
+        $calendario_selezionato_id = $preferences['calendario_selezionato_id'];
     } else {
         // Preferenze di default
         $preferences = [
@@ -69,7 +71,8 @@ if ($isTeacher) {
             'ora_inizio_mattina' => '08:00:00',
             'ora_fine_mattina' => '13:00:00',
             'ora_inizio_pomeriggio' => '14:00:00',
-            'ora_fine_pomeriggio' => '19:00:00'
+            'ora_fine_pomeriggio' => '19:00:00',
+            'calendario_selezionato_id' => null
         ];
     }
 }
@@ -191,6 +194,16 @@ if ($isTeacher) {
                                     <small>Se deselezionato, questo calendario verrà ignorato durante la sincronizzazione</small>
                                 </div>
                                 
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="radio" name="calendario_selezionato" 
+                                               value="<?php echo $cal['id']; ?>"
+                                               <?php echo ($calendario_selezionato_id == $cal['id']) ? 'checked' : ''; ?>>
+                                        Utilizza questo calendario per le nuove lezioni
+                                    </label>
+                                    <small>Le nuove lezioni create verranno inserite in questo calendario</small>
+                                </div>
+                                
                                 <input type="hidden" name="calendars[<?php echo $index; ?>][id]" value="<?php echo $cal['id']; ?>">
                             </div>
                         <?php endforeach; ?>
@@ -237,6 +250,14 @@ if ($isTeacher) {
                                     Calendario attivo
                                 </label>
                                 <small>Se deselezionato, questo calendario verrà ignorato durante la sincronizzazione</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="radio" name="calendario_selezionato" value="new_0" checked>
+                                    Utilizza questo calendario per le nuove lezioni
+                                </label>
+                                <small>Le nuove lezioni create verranno inserite in questo calendario</small>
                             </div>
                         </div>
                     <?php endif; ?>

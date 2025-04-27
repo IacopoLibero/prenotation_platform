@@ -1,61 +1,58 @@
--- Elimina le tabelle se esistono già (in ordine inverso rispetto alle dipendenze)
-DROP TABLE IF EXISTS OAuth_Tokens;
-DROP TABLE IF EXISTS Preferiti;
-DROP TABLE IF EXISTS Preferenze_Disponibilita;
-DROP TABLE IF EXISTS Disponibilita;
-DROP TABLE IF EXISTS Lezioni;
-DROP TABLE IF EXISTS Calendari_Professori;
-DROP TABLE IF EXISTS Professori;
-DROP TABLE IF EXISTS Studenti;
+-- phpMyAdmin SQL Dump
+-- version 5.2.0
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost
+-- Creato il: Apr 27, 2025 alle 16:19
+-- Versione del server: 8.0.36
+-- Versione PHP: 8.0.22
 
--- Tabella Studenti
-CREATE TABLE `Studenti` (
-  `username` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-);
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- Tabella Professori
-CREATE TABLE `Professori` (
-  `username` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `bio` text,
-  `materie` varchar(255) DEFAULT NULL
-);
 
--- Tabella OAuth_Tokens
-CREATE TABLE `OAuth_Tokens` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `user_email` varchar(100) NOT NULL,
-  `user_type` enum('professore','studente') NOT NULL,
-  `access_token` text,
-  `refresh_token` text,
-  `expiry_date` datetime,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `user_email` (`user_email`, `user_type`)
-);
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- Tabella Calendari_Professori
+--
+-- Database: `my_superipetizioni`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `Calendari_Professori`
+--
+
 CREATE TABLE `Calendari_Professori` (
-  `id` int NOT NULL AUTO_INCREMENT,
+  `id` int NOT NULL,
   `teacher_email` varchar(100) NOT NULL,
   `google_calendar_link` varchar(255) NOT NULL,
   `google_calendar_id` varchar(100) DEFAULT NULL,
   `nome_calendario` varchar(100) DEFAULT 'Calendario',
   `ore_prima_evento` float DEFAULT '0',
   `ore_dopo_evento` float DEFAULT '0',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `teacher_email` (`teacher_email`),
-  CONSTRAINT `calendari_professori_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE
-);
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Tabella Lezioni
+--
+-- Dump dei dati per la tabella `Calendari_Professori`
+--
+
+INSERT INTO `Calendari_Professori` (`id`, `teacher_email`, `google_calendar_link`, `google_calendar_id`, `nome_calendario`, `ore_prima_evento`, `ore_dopo_evento`, `is_active`, `created_at`) VALUES
+(1, 'prova1@gmail.com', 'https://calendar.google.com/calendar/embed?src=78859b2513ad7e40512503b01415c82e795a1135df834c68d97bbdbc877a04a9%40group.calendar.google.com', '78859b2513ad7e40512503b01415c82e795a1135df834c68d97bbdbc877a04a9@group.calendar.google.com', 'corso', 2, 1, 1, '2025-04-27 13:41:22'),
+(3, 'prova1@gmail.com', 'https://calendar.google.com/calendar/embed?src=classroom101560746385280479858%40group.calendar.google.com', 'classroom101560746385280479858@group.calendar.google.com', 'ripetizioni', 0, 0, 1, '2025-04-27 13:42:56');
+
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `Lezioni`
+--
+
 CREATE TABLE `Lezioni` (
   `id` int NOT NULL,
   `teacher_email` varchar(100) NOT NULL,
@@ -66,104 +63,170 @@ CREATE TABLE `Lezioni` (
   `end_time` datetime NOT NULL,
   `stato` enum('disponibile','prenotata','completata','cancellata') DEFAULT 'disponibile',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Tabella Disponibilita
-CREATE TABLE `Disponibilita` (
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `OAuth_Tokens`
+--
+
+CREATE TABLE `OAuth_Tokens` (
   `id` int NOT NULL,
-  `teacher_email` varchar(100) NOT NULL,
-  `giorno_settimana` enum('lunedi','martedi','mercoledi','giovedi','venerdi','sabato','domenica') NOT NULL,
-  `ora_inizio` time NOT NULL,
-  `ora_fine` time NOT NULL
-);
+  `user_email` varchar(100) NOT NULL,
+  `user_type` enum('professore','studente') NOT NULL,
+  `access_token` text,
+  `refresh_token` text,
+  `expiry_date` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Tabella Preferenze_Disponibilita
+--
+-- Dump dei dati per la tabella `OAuth_Tokens`
+--
+
+INSERT INTO `OAuth_Tokens` (`id`, `user_email`, `user_type`, `access_token`, `refresh_token`, `expiry_date`, `created_at`, `updated_at`) VALUES
+(1, 'prova1@gmail.com', 'professore', 'ya29.a0AZYkNZjjkA4tgSpm7ZTTvoWNtCfotIdV_ZAMSMct0Pl_WiB-9ybuRgYmVG4BqDlx80lQSDSqV5r9NDMWNvGHUBN-V0-K49b4NDnyeGjP5Qlf2B1X5SCzw41_mIkddKLkPofrifnqqxBf6dNKSKMu8hFrfjrOr-QBzfm17lTVzAaCgYKAdMSARMSFQHGX2MiBq4L3_RAG9XMQQAYMM7o0A0177', '1//09bq-wsa7rArVCgYIARAAGAkSNwF-L9IrwX_LSRkPRSY7GwdLgbisQ26ovGWosdh3gLwNaroxXlwqKy-bKoRhGMolcE_UI_W_PoM', '2025-04-27 17:15:58', '2025-04-27 10:32:21', '2025-04-27 14:15:59');
+
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `Preferenze_Disponibilita`
+--
+
 CREATE TABLE `Preferenze_Disponibilita` (
   `id` int NOT NULL,
   `teacher_email` varchar(100) NOT NULL,
   `weekend` tinyint(1) DEFAULT '0',
+  `calendario_selezionato_id` int DEFAULT NULL,
   `mattina` tinyint(1) DEFAULT '1',
   `pomeriggio` tinyint(1) DEFAULT '1',
   `ora_inizio_mattina` time DEFAULT '08:00:00',
   `ora_fine_mattina` time DEFAULT '13:00:00',
   `ora_inizio_pomeriggio` time DEFAULT '14:00:00',
   `ora_fine_pomeriggio` time DEFAULT '19:00:00'
-);
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Tabella Preferiti
-CREATE TABLE `Preferiti` (
-  `id` int NOT NULL,
-  `student_email` varchar(100) NOT NULL,
-  `teacher_email` varchar(100) NOT NULL,
+--
+-- Dump dei dati per la tabella `Preferenze_Disponibilita`
+--
+
+INSERT INTO `Preferenze_Disponibilita` (`id`, `teacher_email`, `weekend`, `calendario_selezionato_id`, `mattina`, `pomeriggio`, `ora_inizio_mattina`, `ora_fine_mattina`, `ora_inizio_pomeriggio`, `ora_fine_pomeriggio`) VALUES
+(1, 'prova1@gmail.com', 0, NULL, 1, 1, '00:00:08', '13:00:00', '14:00:00', '19:00:00');
+
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `Professori`
+--
+
+CREATE TABLE `Professori` (
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `bio` text,
+  `materie` varchar(255) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dump dei dati per la tabella `Professori`
+--
+
+INSERT INTO `Professori` (`username`, `email`, `password`, `created_at`, `bio`, `materie`) VALUES
+('IacopoLibero', 'prova1@gmail.com', '$2y$10$29yHKALm3d92TONZqQ8rs.JoNxwXEEPTePhc69e0wXGqaJxUiRqH.', '2025-04-27 10:31:52', '', 'informatica');
+
+-- --------------------------------------------------------
+
+--
+-- Struttura della tabella `Studenti`
+--
+
+CREATE TABLE `Studenti` (
+  `username` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Indici tabella Studenti
-ALTER TABLE `Studenti`
-  ADD PRIMARY KEY (`email`),
-  ADD UNIQUE KEY `email` (`email`);
+--
+-- Indici per le tabelle scaricate
+--
 
--- Indici tabella Professori
-ALTER TABLE `Professori`
-  ADD PRIMARY KEY (`email`),
-  ADD UNIQUE KEY `email` (`email`);
+--
+-- Indici per le tabelle `Calendari_Professori`
+--
+ALTER TABLE `Calendari_Professori`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `teacher_calendar` (`teacher_email`,`google_calendar_id`);
 
--- Indici tabella Lezioni
+--
+-- Indici per le tabelle `Lezioni`
+--
 ALTER TABLE `Lezioni`
   ADD PRIMARY KEY (`id`),
   ADD KEY `teacher_email` (`teacher_email`),
   ADD KEY `student_email` (`student_email`);
 
--- Indici tabella Disponibilita
-ALTER TABLE `Disponibilita`
+--
+-- Indici per le tabelle `OAuth_Tokens`
+--
+ALTER TABLE `OAuth_Tokens`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `teacher_email` (`teacher_email`,`giorno_settimana`,`ora_inizio`);
+  ADD UNIQUE KEY `user_email` (`user_email`,`user_type`);
 
--- Indici tabella Preferenze_Disponibilita
+--
+-- Indici per le tabelle `Preferenze_Disponibilita`
+--
 ALTER TABLE `Preferenze_Disponibilita`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `teacher_email` (`teacher_email`);
+  ADD KEY `teacher_email` (`teacher_email`),
+  ADD KEY `fk_calendario_selezionato` (`calendario_selezionato_id`);
 
--- Indici tabella Preferiti
-ALTER TABLE `Preferiti`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `student_email` (`student_email`,`teacher_email`),
-  ADD KEY `teacher_email` (`teacher_email`);
+--
+-- Indici per le tabelle `Professori`
+--
+ALTER TABLE `Professori`
+  ADD PRIMARY KEY (`email`),
+  ADD UNIQUE KEY `email` (`email`);
 
--- AUTO_INCREMENT
-ALTER TABLE `Disponibilita`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+--
+-- Indici per le tabelle `Studenti`
+--
+ALTER TABLE `Studenti`
+  ADD PRIMARY KEY (`email`),
+  ADD UNIQUE KEY `email` (`email`);
 
+--
+-- AUTO_INCREMENT per le tabelle scaricate
+--
+
+--
+-- AUTO_INCREMENT per la tabella `Calendari_Professori`
+--
+ALTER TABLE `Calendari_Professori`
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT per la tabella `Lezioni`
+--
 ALTER TABLE `Lezioni`
   MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
-ALTER TABLE `Preferenze_Disponibilita`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `Preferiti`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
-
+--
+-- AUTO_INCREMENT per la tabella `OAuth_Tokens`
+--
 ALTER TABLE `OAuth_Tokens`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
--- Vincoli di chiave esterna
-ALTER TABLE `Lezioni`
-  ADD CONSTRAINT `lezioni_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE,
-  ADD CONSTRAINT `lezioni_ibfk_2` FOREIGN KEY (`student_email`) REFERENCES `Studenti` (`email`) ON DELETE SET NULL;
-
-ALTER TABLE `OAuth_Tokens`
-  ADD CONSTRAINT `oauth_tokens_professori_fk` FOREIGN KEY (`user_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE,
-  ADD CONSTRAINT `oauth_tokens_studenti_fk` FOREIGN KEY (`user_email`) REFERENCES `Studenti` (`email`) ON DELETE CASCADE;
-
-ALTER TABLE `Disponibilita`
-  ADD CONSTRAINT `disponibilita_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE;
-
+--
+-- AUTO_INCREMENT per la tabella `Preferenze_Disponibilita`
+--
 ALTER TABLE `Preferenze_Disponibilita`
-  ADD CONSTRAINT `preferenze_disponibilita_ibfk_1` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE;
-
-ALTER TABLE `Preferiti`
-  ADD CONSTRAINT `preferiti_ibfk_1` FOREIGN KEY (`student_email`) REFERENCES `Studenti` (`email`) ON DELETE CASCADE,
-  ADD CONSTRAINT `preferiti_ibfk_2` FOREIGN KEY (`teacher_email`) REFERENCES `Professori` (`email`) ON DELETE CASCADE;
-
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 COMMIT;
 
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

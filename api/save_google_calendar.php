@@ -79,6 +79,13 @@ try {
                     $stmt->bind_param("i", $calendarId);
                     
                     if ($stmt->execute()) {
+                        // Se questo calendario era selezionato nelle preferenze, imposta il campo a NULL
+                        $query = "UPDATE Preferenze_Disponibilita SET calendario_selezionato_id = NULL 
+                                  WHERE teacher_email = ? AND calendario_selezionato_id = ?";
+                        $stmt = $conn->prepare($query);
+                        $stmt->bind_param("si", $userEmail, $calendarId);
+                        $stmt->execute();
+
                         echo json_encode(['success' => true, 'message' => 'Calendario rimosso con successo']);
                     } else {
                         throw new Exception("Errore nell'eliminazione del calendario: " . $stmt->error);
@@ -142,6 +149,12 @@ try {
             $ora_inizio_pomeriggio = isset($data['preferences']['ora_inizio_pomeriggio']) ? $data['preferences']['ora_inizio_pomeriggio'] : '14:00:00';
             $ora_fine_pomeriggio = isset($data['preferences']['ora_fine_pomeriggio']) ? $data['preferences']['ora_fine_pomeriggio'] : '19:00:00';
             
+            // Gestisci il calendario selezionato per le nuove lezioni
+            $calendario_selezionato_id = null;
+            if (isset($data['preferences']['calendario_selezionato_id'])) {
+                $calendario_selezionato_id = intval($data['preferences']['calendario_selezionato_id']);
+            }
+            
             // Verifica se esiste già un record di preferenze
             $query = "SELECT id FROM Preferenze_Disponibilita WHERE teacher_email = ?";
             $stmt = $conn->prepare($query);
@@ -159,24 +172,27 @@ try {
                          ora_inizio_mattina = ?,
                          ora_fine_mattina = ?,
                          ora_inizio_pomeriggio = ?,
-                         ora_fine_pomeriggio = ?
+                         ora_fine_pomeriggio = ?,
+                         calendario_selezionato_id = ?
                          WHERE id = ?";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("iiissssi", $weekend, $mattina, $pomeriggio, 
+                $stmt->bind_param("iiissssii", $weekend, $mattina, $pomeriggio, 
                                 $ora_inizio_mattina, $ora_fine_mattina, 
                                 $ora_inizio_pomeriggio, $ora_fine_pomeriggio, 
-                                $preferenceId);
+                                $calendario_selezionato_id, $preferenceId);
             } else {
                 // Inserisci nuove preferenze
                 $query = "INSERT INTO Preferenze_Disponibilita 
                          (teacher_email, weekend, mattina, pomeriggio, 
                           ora_inizio_mattina, ora_fine_mattina, 
-                          ora_inizio_pomeriggio, ora_fine_pomeriggio) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                          ora_inizio_pomeriggio, ora_fine_pomeriggio,
+                          calendario_selezionato_id) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("siiiisss", $userEmail, $weekend, $mattina, $pomeriggio, 
+                $stmt->bind_param("siiiisssi", $userEmail, $weekend, $mattina, $pomeriggio, 
                                 $ora_inizio_mattina, $ora_fine_mattina, 
-                                $ora_inizio_pomeriggio, $ora_fine_pomeriggio);
+                                $ora_inizio_pomeriggio, $ora_fine_pomeriggio,
+                                $calendario_selezionato_id);
             }
             
             if (!$stmt->execute()) {
