@@ -86,8 +86,6 @@ CREATE TABLE `OAuth_Tokens` (
 -- Dump dei dati per la tabella `OAuth_Tokens`
 --
 
-INSERT INTO `OAuth_Tokens` (`id`, `user_email`, `user_type`, `access_token`, `refresh_token`, `expiry_date`, `created_at`, `updated_at`) VALUES
-(1, 'prova1@gmail.com', 'professore', 'ya29.a0AZYkNZjjkA4tgSpm7ZTTvoWNtCfotIdV_ZAMSMct0Pl_WiB-9ybuRgYmVG4BqDlx80lQSDSqV5r9NDMWNvGHUBN-V0-K49b4NDnyeGjP5Qlf2B1X5SCzw41_mIkddKLkPofrifnqqxBf6dNKSKMu8hFrfjrOr-QBzfm17lTVzAaCgYKAdMSARMSFQHGX2MiBq4L3_RAG9XMQQAYMM7o0A0177', '1//09bq-wsa7rArVCgYIARAAGAkSNwF-L9IrwX_LSRkPRSY7GwdLgbisQ26ovGWosdh3gLwNaroxXlwqKy-bKoRhGMolcE_UI_W_PoM', '2025-04-27 17:15:58', '2025-04-27 10:32:21', '2025-04-27 14:15:59');
 
 -- --------------------------------------------------------
 
