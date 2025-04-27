@@ -295,7 +295,18 @@ function saveCalendarSettings() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        return response.text().then(text => {
+            try {
+                // Prova a parsare come JSON
+                return JSON.parse(text);
+            } catch (e) {
+                // Se non è un JSON valido, mostra il testo completo
+                console.error('Risposta server non valida (non JSON):', text);
+                throw new Error('Risposta non JSON dal server. Controlla la console.');
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             alert('Configurazione salvata con successo');
@@ -307,6 +318,6 @@ function saveCalendarSettings() {
     })
     .catch(error => {
         console.error('Errore:', error);
-        alert('Si è verificato un errore durante la comunicazione con il server');
+        alert('Si è verificato un errore durante la comunicazione con il server: ' + error.message);
     });
 }

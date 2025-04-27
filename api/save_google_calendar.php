@@ -1,99 +1,132 @@
 <?php
+// Attiva la gestione degli errori per il debug
+ini_set('display_errors', 0); // Disabilita l'output di errori direttamente nella risposta
+error_reporting(E_ALL);
+
 session_start();
 header('Content-Type: application/json');
 require_once '../connessione.php';
 require_once '../google_calendar/calendar_functions.php';
 
-// Verifica se l'utente è autenticato
-if (!isset($_SESSION['email']) || !isset($_SESSION['tipo'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Utente non autenticato']);
-    exit;
+// Funzione di gestione errori per catturare errori fatali
+function handleFatalErrors() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Errore PHP fatale: ' . $error['message'] . ' in ' . $error['file'] . ' on line ' . $error['line']
+        ]);
+    }
 }
+register_shutdown_function('handleFatalErrors');
 
-$userEmail = $_SESSION['email'];
-$userType = $_SESSION['tipo'];
+try {
+    // Verifica se l'utente è autenticato
+    if (!isset($_SESSION['email']) || !isset($_SESSION['tipo'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Utente non autenticato']);
+        exit;
+    }
 
-// Converti il tipo utente se necessario
-if ($userType === 'teacher') {
-    $userType = 'professore';
-} elseif ($userType === 'student') {
-    $userType = 'studente';
-}
+    $userEmail = $_SESSION['email'];
+    $userType = $_SESSION['tipo'];
 
-// Verifica se l'utente ha autorizzato Google Calendar
-if (!hasValidOAuthTokens($userEmail, $userType)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Google Calendar non è stato autorizzato']);
-    exit;
-}
+    // Converti il tipo utente se necessario
+    if ($userType === 'teacher') {
+        $userType = 'professore';
+    } elseif ($userType === 'student') {
+        $userType = 'studente';
+    }
 
-// Gestione delle azioni speciali
-if (isset($_GET['action'])) {
-    switch ($_GET['action']) {
-        case 'remove':
-            // Rimozione di un calendario specifico
-            $calendarId = isset($_GET['id']) ? intval($_GET['id']) : 0;
-            
-            if ($calendarId <= 0) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'ID calendario non valido']);
-                exit;
-            }
-            
-            try {
-                // Verifica che il calendario appartenga a questo utente
-                $query = "SELECT id FROM Calendari_Professori WHERE id = ? AND teacher_email = ?";
-                $stmt = $conn->prepare($query);
-                $stmt->bind_param("is", $calendarId, $userEmail);
-                $stmt->execute();
-                $result = $stmt->get_result();
+    // Verifica se l'utente ha autorizzato Google Calendar
+    if (!hasValidOAuthTokens($userEmail, $userType)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Google Calendar non è stato autorizzato']);
+        exit;
+    }
+
+    // Gestione delle azioni speciali
+    if (isset($_GET['action'])) {
+        switch ($_GET['action']) {
+            case 'remove':
+                // Rimozione di un calendario specifico
+                $calendarId = isset($_GET['id']) ? intval($_GET['id']) : 0;
                 
-                if ($result->num_rows === 0) {
-                    http_response_code(403);
-                    echo json_encode(['success' => false, 'message' => 'Calendario non trovato o non autorizzato']);
+                if ($calendarId <= 0) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'ID calendario non valido']);
                     exit;
                 }
                 
-                // Elimina il calendario
-                $query = "DELETE FROM Calendari_Professori WHERE id = ?";
-                $stmt = $conn->prepare($query);
-                $stmt->bind_param("i", $calendarId);
-                
-                if ($stmt->execute()) {
-                    echo json_encode(['success' => true, 'message' => 'Calendario rimosso con successo']);
-                } else {
-                    throw new Exception("Errore nell'eliminazione del calendario: " . $stmt->error);
+                try {
+                    // Verifica che il calendario appartenga a questo utente
+                    $query = "SELECT id FROM Calendari_Professori WHERE id = ? AND teacher_email = ?";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bind_param("is", $calendarId, $userEmail);
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows === 0) {
+                        http_response_code(403);
+                        echo json_encode(['success' => false, 'message' => 'Calendario non trovato o non autorizzato']);
+                        exit;
+                    }
+                    
+                    // Elimina il calendario
+                    $query = "DELETE FROM Calendari_Professori WHERE id = ?";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bind_param("i", $calendarId);
+                    
+                    if ($stmt->execute()) {
+                        echo json_encode(['success' => true, 'message' => 'Calendario rimosso con successo']);
+                    } else {
+                        throw new Exception("Errore nell'eliminazione del calendario: " . $stmt->error);
+                    }
+                } catch (Exception $e) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'message' => 'Errore: ' . $e->getMessage()]);
                 }
-            } catch (Exception $e) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'message' => 'Errore: ' . $e->getMessage()]);
-            }
-            exit;
-            break;
+                exit;
+                break;
+        }
     }
-}
 
-// Ottieni i dati inviati
-$data = json_decode(file_get_contents('php://input'), true);
+    // Ottieni i dati inviati
+    $inputData = file_get_contents('php://input');
+    if (empty($inputData)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Nessun dato ricevuto']);
+        exit;
+    }
+    
+    $data = json_decode($inputData, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Errore nel parsing JSON: ' . json_last_error_msg(),
+            'input_data' => substr($inputData, 0, 200) . '...' // Mostra parte dei dati ricevuti per debug
+        ]);
+        exit;
+    }
 
-// Verifica se ci sono calendari da salvare
-if (!isset($data['calendars']) || !is_array($data['calendars']) || count($data['calendars']) == 0) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Nessun calendario fornito']);
-    exit;
-}
+    // Verifica se ci sono calendari da salvare
+    if (!isset($data['calendars']) || !is_array($data['calendars']) || count($data['calendars']) == 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Nessun calendario fornito']);
+        exit;
+    }
 
-// Verifica la connessione a Google Calendar
-$connectionTest = testGoogleCalendarConnection($userEmail, $userType);
+    // Verifica la connessione a Google Calendar
+    $connectionTest = testGoogleCalendarConnection($userEmail, $userType);
 
-if (!$connectionTest['success']) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => $connectionTest['message']]);
-    exit;
-}
+    if (!$connectionTest['success']) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => $connectionTest['message']]);
+        exit;
+    }
 
-try {
     // Inizia una transazione per garantire l'integrità dei dati
     $conn->begin_transaction();
     
@@ -129,7 +162,7 @@ try {
                          ora_fine_pomeriggio = ?
                          WHERE id = ?";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("iiisssssi", $weekend, $mattina, $pomeriggio, 
+                $stmt->bind_param("iiissssi", $weekend, $mattina, $pomeriggio, 
                                 $ora_inizio_mattina, $ora_fine_mattina, 
                                 $ora_inizio_pomeriggio, $ora_fine_pomeriggio, 
                                 $preferenceId);
@@ -141,7 +174,7 @@ try {
                           ora_inizio_pomeriggio, ora_fine_pomeriggio) 
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($query);
-                $stmt->bind_param("siissss", $userEmail, $weekend, $mattina, $pomeriggio, 
+                $stmt->bind_param("siiiisss", $userEmail, $weekend, $mattina, $pomeriggio, 
                                 $ora_inizio_mattina, $ora_fine_mattina, 
                                 $ora_inizio_pomeriggio, $ora_fine_pomeriggio);
             }
@@ -230,8 +263,13 @@ try {
     }
 } catch (Exception $e) {
     // Rollback in caso di errore
-    $conn->rollback();
+    if (isset($conn) && $conn->ping()) {
+        $conn->rollback();
+    }
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Errore: ' . $e->getMessage()]);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Errore: ' . $e->getMessage()
+    ]);
 }
 ?>
