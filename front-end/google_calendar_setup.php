@@ -26,29 +26,51 @@ if (!$hasGoogleCalendar) {
 $calendarsResponse = getUserCalendars($userEmail, $userType);
 $calendars = $calendarsResponse['success'] ? $calendarsResponse['data'] : [];
 
-// Per i professori, recupera le informazioni sul calendario collegato
-$selectedCalendarId = '';
-$calendarName = 'Calendario Lezioni';
-$hoursBeforeEvent = 0;
-$hoursAfterEvent = 0;
+// Array per i calendari collegati
+$linkedCalendars = [];
 
+// Per i professori, recupera le informazioni sui calendari collegati
 if ($isTeacher) {
     require_once '../connessione.php';
     
-    $query = "SELECT google_calendar_id, nome_calendario, ore_prima_evento, ore_dopo_evento 
+    // Recupera tutti i calendari collegati per questo professore
+    $query = "SELECT id, google_calendar_id, nome_calendario, ore_prima_evento, ore_dopo_evento, is_active 
               FROM Calendari_Professori 
-              WHERE teacher_email = ?";
+              WHERE teacher_email = ?
+              ORDER BY id ASC";
     $stmt = $conn->prepare($query);
     $stmt->bind_param("s", $userEmail);
     $stmt->execute();
     $result = $stmt->get_result();
     
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $selectedCalendarId = $row['google_calendar_id'];
-        $calendarName = $row['nome_calendario'];
-        $hoursBeforeEvent = $row['ore_prima_evento'];
-        $hoursAfterEvent = $row['ore_dopo_evento'];
+    while ($row = $result->fetch_assoc()) {
+        $linkedCalendars[] = $row;
+    }
+    
+    // Recupera anche le preferenze di disponibilità
+    $query_pref = "SELECT weekend, mattina, pomeriggio, 
+                   ora_inizio_mattina, ora_fine_mattina, 
+                   ora_inizio_pomeriggio, ora_fine_pomeriggio
+                   FROM Preferenze_Disponibilita 
+                   WHERE teacher_email = ?";
+    $stmt_pref = $conn->prepare($query_pref);
+    $stmt_pref->bind_param("s", $userEmail);
+    $stmt_pref->execute();
+    $result_pref = $stmt_pref->get_result();
+    
+    if ($result_pref->num_rows > 0) {
+        $preferences = $result_pref->fetch_assoc();
+    } else {
+        // Preferenze di default
+        $preferences = [
+            'weekend' => 0,
+            'mattina' => 1,
+            'pomeriggio' => 1,
+            'ora_inizio_mattina' => '08:00:00',
+            'ora_fine_mattina' => '13:00:00',
+            'ora_inizio_pomeriggio' => '14:00:00',
+            'ora_fine_pomeriggio' => '19:00:00'
+        ];
     }
 }
 ?>
@@ -110,42 +132,167 @@ if ($isTeacher) {
         
         <?php if ($isTeacher): ?>
         <section class="calendar-config">
-            <h2>Impostazioni Calendario</h2>
+            <h2>Impostazioni Calendari</h2>
             <div class="config-container">
                 <form id="calendar-form">
-                    <div class="form-group">
-                        <label for="calendar-select">Seleziona il calendario da utilizzare:</label>
-                        <select id="calendar-select" name="calendar_id" required>
-                            <option value="">-- Seleziona un calendario --</option>
-                            <?php foreach ($calendars as $calendar): ?>
-                                <option value="<?php echo htmlspecialchars($calendar['id']); ?>" 
-                                        <?php echo ($calendar['id'] === $selectedCalendarId) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($calendar['summary']); ?> 
-                                    <?php echo $calendar['primary'] ? '(Principale)' : ''; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div id="calendarsContainer">
+                    <?php if (count($linkedCalendars) > 0): ?>
+                        <?php foreach ($linkedCalendars as $index => $cal): ?>
+                            <div class="calendar-item" data-index="<?php echo $index; ?>">
+                                <button type="button" class="btn-remove-calendar" data-calendar-id="<?php echo $cal['id']; ?>">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                <div class="form-group">
+                                    <label for="calendar-select-<?php echo $index; ?>">Calendario:</label>
+                                    <select id="calendar-select-<?php echo $index; ?>" name="calendars[<?php echo $index; ?>][calendar_id]" required>
+                                        <option value="">-- Seleziona un calendario --</option>
+                                        <?php foreach ($calendars as $calendar): ?>
+                                            <option value="<?php echo htmlspecialchars($calendar['id']); ?>" 
+                                                    <?php echo ($calendar['id'] === $cal['google_calendar_id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($calendar['summary']); ?> 
+                                                <?php echo $calendar['primary'] ? '(Principale)' : ''; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="calendar-name-<?php echo $index; ?>" class="calendar-name-label">Nome del calendario:</label>
+                                    <input type="text" id="calendar-name-<?php echo $index; ?>" 
+                                           name="calendars[<?php echo $index; ?>][calendar_name]"
+                                           value="<?php echo htmlspecialchars($cal['nome_calendario']); ?>" required>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group half">
+                                        <label for="hours-before-<?php echo $index; ?>">Ore prima dell'evento:</label>
+                                        <input type="number" id="hours-before-<?php echo $index; ?>" 
+                                               name="calendars[<?php echo $index; ?>][hours_before]"
+                                               value="<?php echo $cal['ore_prima_evento']; ?>" min="0" step="0.5">
+                                        <small>Tempo di preparazione prima della lezione</small>
+                                    </div>
+                                    
+                                    <div class="form-group half">
+                                        <label for="hours-after-<?php echo $index; ?>">Ore dopo l'evento:</label>
+                                        <input type="number" id="hours-after-<?php echo $index; ?>" 
+                                               name="calendars[<?php echo $index; ?>][hours_after]"
+                                               value="<?php echo $cal['ore_dopo_evento']; ?>" min="0" step="0.5">
+                                        <small>Tempo di riposo dopo la lezione</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="calendars[<?php echo $index; ?>][is_active]" 
+                                               <?php echo $cal['is_active'] ? 'checked' : ''; ?> value="1">
+                                        Calendario attivo
+                                    </label>
+                                    <small>Se deselezionato, questo calendario verrà ignorato durante la sincronizzazione</small>
+                                </div>
+                                
+                                <input type="hidden" name="calendars[<?php echo $index; ?>][id]" value="<?php echo $cal['id']; ?>">
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="calendar-item" data-index="0">
+                            <div class="form-group">
+                                <label for="calendar-select-0">Seleziona il calendario:</label>
+                                <select id="calendar-select-0" name="calendars[0][calendar_id]" required>
+                                    <option value="">-- Seleziona un calendario --</option>
+                                    <?php foreach ($calendars as $calendar): ?>
+                                        <option value="<?php echo htmlspecialchars($calendar['id']); ?>">
+                                            <?php echo htmlspecialchars($calendar['summary']); ?> 
+                                            <?php echo $calendar['primary'] ? '(Principale)' : ''; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="calendar-name-0" class="calendar-name-label">Nome del calendario:</label>
+                                <input type="text" id="calendar-name-0" name="calendars[0][calendar_name]" 
+                                       value="Calendario Lezioni" required>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label for="hours-before-0">Ore prima dell'evento:</label>
+                                    <input type="number" id="hours-before-0" name="calendars[0][hours_before]" 
+                                           value="0" min="0" step="0.5">
+                                    <small>Tempo di preparazione prima della lezione</small>
+                                </div>
+                                
+                                <div class="form-group half">
+                                    <label for="hours-after-0">Ore dopo l'evento:</label>
+                                    <input type="number" id="hours-after-0" name="calendars[0][hours_after]" 
+                                           value="0" min="0" step="0.5">
+                                    <small>Tempo di riposo dopo la lezione</small>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="calendars[0][is_active]" checked value="1">
+                                    Calendario attivo
+                                </label>
+                                <small>Se deselezionato, questo calendario verrà ignorato durante la sincronizzazione</small>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="calendar-name">Nome del calendario:</label>
-                        <input type="text" id="calendar-name" name="calendar_name" 
-                               value="<?php echo htmlspecialchars($calendarName); ?>" required>
-                    </div>
+                    <button type="button" id="btn-add-calendar" class="btn-add">
+                        <i class="fas fa-plus"></i> Aggiungi un altro calendario
+                    </button>
                     
-                    <div class="form-row">
-                        <div class="form-group half">
-                            <label for="hours-before">Ore prima dell'evento:</label>
-                            <input type="number" id="hours-before" name="hours_before" 
-                                   value="<?php echo $hoursBeforeEvent; ?>" min="0" step="0.5">
-                            <small>Tempo di preparazione prima della lezione</small>
+                    <h3 class="settings-title">Preferenze di Disponibilità</h3>
+                    
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="weekend" name="weekend" value="1" 
+                                   <?php echo isset($preferences) && $preferences['weekend'] ? 'checked' : ''; ?>>
+                            Disponibile nei weekend (sabato e domenica)
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="mattina" name="mattina" value="1" 
+                                   <?php echo isset($preferences) && $preferences['mattina'] ? 'checked' : ''; ?>>
+                            Disponibile di mattina
+                        </label>
+                        
+                        <div class="time-range-row" id="mattina-times" 
+                             <?php echo isset($preferences) && !$preferences['mattina'] ? 'style="display:none"' : ''; ?>>
+                            <div class="form-group">
+                                <label for="ora-inizio-mattina">Ora inizio:</label>
+                                <input type="time" id="ora-inizio-mattina" name="ora_inizio_mattina" 
+                                       value="<?php echo isset($preferences) ? $preferences['ora_inizio_mattina'] : '08:00'; ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="ora-fine-mattina">Ora fine:</label>
+                                <input type="time" id="ora-fine-mattina" name="ora_fine_mattina" 
+                                       value="<?php echo isset($preferences) ? $preferences['ora_fine_mattina'] : '13:00'; ?>">
+                            </div>
                         </div>
                         
-                        <div class="form-group half">
-                            <label for="hours-after">Ore dopo l'evento:</label>
-                            <input type="number" id="hours-after" name="hours_after" 
-                                   value="<?php echo $hoursAfterEvent; ?>" min="0" step="0.5">
-                            <small>Tempo di riposo dopo la lezione</small>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="pomeriggio" name="pomeriggio" value="1" 
+                                   <?php echo isset($preferences) && $preferences['pomeriggio'] ? 'checked' : ''; ?>>
+                            Disponibile di pomeriggio
+                        </label>
+                        
+                        <div class="time-range-row" id="pomeriggio-times" 
+                             <?php echo isset($preferences) && !$preferences['pomeriggio'] ? 'style="display:none"' : ''; ?>>
+                            <div class="form-group">
+                                <label for="ora-inizio-pomeriggio">Ora inizio:</label>
+                                <input type="time" id="ora-inizio-pomeriggio" name="ora_inizio_pomeriggio" 
+                                       value="<?php echo isset($preferences) ? $preferences['ora_inizio_pomeriggio'] : '14:00'; ?>">
+                            </div>
+                            <div class="form-group">
+                                <label for="ora-fine-pomeriggio">Ora fine:</label>
+                                <input type="time" id="ora-fine-pomeriggio" name="ora_fine_pomeriggio" 
+                                       value="<?php echo isset($preferences) ? $preferences['ora_fine_pomeriggio'] : '19:00'; ?>">
+                            </div>
                         </div>
                     </div>
                     
@@ -164,14 +311,15 @@ if ($isTeacher) {
         <section class="calendar-info">
             <h2>Come Funziona</h2>
             <div class="info-container">
-                <p>Le lezioni che crei sulla piattaforma verranno automaticamente sincronizzate con il tuo Google Calendar.</p>
+                <p>Le lezioni che crei sulla piattaforma verranno automaticamente sincronizzate con i tuoi Calendari Google.</p>
                 <p>Il sistema terrà in considerazione:</p>
                 <ul>
                     <li>Le tue lezioni programmate</li>
                     <li>Le prenotazioni degli studenti</li>
-                    <li>Il tempo di preparazione e riposo impostato</li>
+                    <li>Il tempo di preparazione e riposo impostato per ogni calendario</li>
+                    <li>Le preferenze di disponibilità dei giorni della settimana</li>
                 </ul>
-                <p>Puoi sempre modificare il calendario selezionato o revocare l'accesso dalla tua <a href="user_account.php">pagina profilo</a>.</p>
+                <p>Puoi sempre modificare i calendari selezionati o revocare l'accesso dalla tua <a href="user_account.php">pagina profilo</a>.</p>
             </div>
         </section>
         <?php else: ?>
