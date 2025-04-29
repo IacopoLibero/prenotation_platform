@@ -346,16 +346,4 @@ function getCalendarEventIds($lessonId, $conn) {
         return null;
     }
 }
-
-/**
- * Checks if the user has valid OAuth tokens for Google Calendar
- * 
- * @param string $userEmail Email of the user
- * @param string $userType Type of user ('professore' o 'studente')
- * @return bool True if valid tokens exist, false otherwise
- */
-function hasValidOAuthTokens($userEmail, $userType) {
-    $tokens = getOAuthTokens($userEmail, $userType);
-    return !empty($tokens) && !empty($tokens['refresh_token']);
-}
 ?>

@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 require_once '../connessione.php';
+require_once '../google_calendar/token_storage.php';  // Changed to directly include token_storage.php first
 require_once '../google_calendar/calendar_functions.php';
 
 // Verifica se l'utente è autenticato
