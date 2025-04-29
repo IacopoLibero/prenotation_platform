@@ -3,6 +3,16 @@ let currentWeek = 0; // Week offset (0 = current week, 1 = next week, etc.)
 let allAvailability = [];
 let currentTeacherEmail = '';
 let groupedByWeek = {}; // Store availability grouped by week
+// Mapping dei nomi dei giorni della settimana in italiano
+let dayNames = {
+    'lunedi': 'Lunedì',
+    'martedi': 'Martedì',
+    'mercoledi': 'Mercoledì',
+    'giovedi': 'Giovedì',
+    'venerdi': 'Venerdì',
+    'sabato': 'Sabato',
+    'domenica': 'Domenica'
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('teacherSelect').addEventListener('change', function() {
@@ -164,20 +174,14 @@ function renderWeekAvailability(weekOffset) {
     
     // Group by date
     const groupedByDate = {};
-    const dayNames = {
-        'lunedi': 'Lunedì',
-        'martedi': 'Martedì',
-        'mercoledi': 'Mercoledì',
-        'giovedi': 'Giovedì',
-        'venerdi': 'Venerdì',
-        'sabato': 'Sabato',
-        'domenica': 'Domenica'
-    };
     
     weekSlots.forEach(slot => {
         if (!groupedByDate[slot.data]) {
+            // Usa il nome tradotto del giorno
+            const translatedDayName = dayNames[slot.giorno_settimana] || slot.giorno_settimana;
+            
             groupedByDate[slot.data] = {
-                day: dayNames[slot.giorno_settimana],
+                day: translatedDayName,
                 date: slot.data_formattata,
                 slots: []
             };

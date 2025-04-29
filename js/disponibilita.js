@@ -1,9 +1,17 @@
 // FUNZIONA NON TOCCARE STO CAZZO DI FILE - Aggiornato per supporto in tempo reale
 
-// // Variabili globali
+// Variabili globali
 let currentWeek = 0;
 let availabilityData = {};
-let dayNames = {};
+let dayNames = {
+    'lunedi': 'Lunedì',
+    'martedi': 'Martedì',
+    'mercoledi': 'Mercoledì',
+    'giovedi': 'Giovedì',
+    'venerdi': 'Venerdì',
+    'sabato': 'Sabato',
+    'domenica': 'Domenica'
+};
 let maxWeeks = 0;
 
 // Inizializza la pagina
@@ -16,7 +24,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // Initialize data from PHP
 function initAvailability(data, days, weeks) {
     availabilityData = data;
-    dayNames = days;
+    // Assegna i nomi dei giorni se forniti, altrimenti usa il mapping predefinito
+    if (days && Object.keys(days).length > 0) {
+        dayNames = days;
+    }
     maxWeeks = weeks;
     
     // Stampa i dati disponibilità sulla console per debug
@@ -303,11 +314,14 @@ function renderWeek(weekNumber) {
         // Formatta la data per la visualizzazione
         const formattedDate = dayDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
+        // Usa il nome del giorno tradotto dal mapping
+        const translatedDayName = dayNames[dayName] || dayName;
+        
         // Crea una card per il giorno
         html += `
             <div class="day-card">
                 <h3 class="day-header">
-                    ${dayNames[dayName]}
+                    ${translatedDayName}
                     <span class="date-badge">${formattedDate}</span>
                 </h3>
         `;
