@@ -288,5 +288,5 @@ function bookSlot(slotId, date, startTime, endTime) {
         `date=${date}&time_start=${startTime}&time_end=${endTime}&teacher=${encodeURIComponent(currentTeacherEmail)}`;
     
     // Reindirizza alla pagina di prenotazione
-    window.location.href = `book_lesson.php?${bookingParams}`;
+    window.location.href = `../api/book_lesson.php?${bookingParams}`;
 }
