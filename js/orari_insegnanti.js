@@ -37,7 +37,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadAvailability() {
-    fetch(`../api/get_availability.php?email=${encodeURIComponent(currentTeacherEmail)}`)
+    // Usa sempre l'endpoint in tempo reale
+    const apiEndpoint = '../api/get_calendar_availability.php';
+    
+    fetch(`${apiEndpoint}?email=${encodeURIComponent(currentTeacherEmail)}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Errore nella risposta del server');
@@ -48,6 +51,12 @@ function loadAvailability() {
             console.log("Dati ricevuti:", data); // Debug
             
             if (data.success && data.availability && data.availability.length > 0) {
+                // Visualizza l'indicatore di dati in tempo reale
+                const rtIndicator = document.getElementById('realtimeIndicator');
+                if (rtIndicator) {
+                    rtIndicator.style.display = 'block';
+                }
+                
                 // Store all availability data
                 allAvailability = data.availability;
                 
@@ -56,23 +65,23 @@ function loadAvailability() {
                 
                 // Render the current week
                 renderWeekAvailability(currentWeek);
+            } else if (data.need_google_calendar || data.no_calendars) {
+                // Messaggio personalizzato se l'insegnante deve configurare Google Calendar
+                const container = document.getElementById('availabilityContainer');
+                container.innerHTML = `
+                    <div class="no-availability">
+                        <p>${data.message || 'Questo insegnante deve configurare Google Calendar per mostrare la disponibilità.'}</p>
+                    </div>
+                `;
             } else {
                 // Messaggio personalizzato in base a se l'insegnante usa Google Calendar o meno
                 const container = document.getElementById('availabilityContainer');
-                if (data.uses_google_calendar) {
-                    container.innerHTML = `
-                        <div class="no-availability">
-                            <p>Questo insegnante utilizza Google Calendar ma non ha ancora lezioni disponibili.</p>
-                            <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div class="no-availability">
-                            <p>Questo insegnante non ha ancora impostato lezioni disponibili.</p>
-                        </div>
-                    `;
-                }
+                container.innerHTML = `
+                    <div class="no-availability">
+                        <p>Questo insegnante utilizza Google Calendar ma non ha ancora lezioni disponibili.</p>
+                        <p>Ti consigliamo di riprovare più tardi o contattare direttamente l'insegnante.</p>
+                    </div>
+                `;
             }
         })
         .catch(error => {
@@ -210,11 +219,14 @@ function renderWeekAvailability(weekOffset) {
                 bookingBtn = `<span class="booking-status">Prenotato</span>`;
             }
             
+            // Add icon for real-time slots from Google Calendar
+            const realtimeIcon = slot.from_google_calendar ? 
+                '<span class="google-badge" title="Sincronizzato con Google Calendar"><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" height="16" alt="Google Calendar"></span>' : '';
+            
             html += `
                 <div class="time-slot ${slotClass}">
-                    <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
+                    <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine} ${realtimeIcon}</span>
                     ${bookingBtn}
-                    ${slot.from_google_calendar == 1 ? '<span class="google-badge">Google Calendar</span>' : ''}
                 </div>
             `;
         });
@@ -229,20 +241,22 @@ function renderWeekAvailability(weekOffset) {
 }
 
 function renderPagination(currentWeek) {
-    // Find min and max week numbers - always include at least 4 weeks
-    let minWeek = 0;
-    let maxWeek = Math.max(3, Object.keys(groupedByWeek).length - 1);
+    // Find the maximum week available
+    const maxWeek = Math.max(3, Object.keys(groupedByWeek).length - 1);
     
-    // Build pagination HTML
-    let paginationHtml = `
-        <div class="pagination">
+    return `
+        <div class="pagination-controls">
             <button 
                 class="pagination-btn" 
                 onclick="changeWeek(${currentWeek - 1})"
-                ${currentWeek <= minWeek ? 'disabled' : ''}>
+                ${currentWeek <= 0 ? 'disabled' : ''}>
                 &laquo; Settimana precedente
             </button>
-            <span class="page-indicator">Settimana ${currentWeek === 0 ? 'corrente' : currentWeek === 1 ? 'prossima' : currentWeek + 1}</span>
+            <span class="week-indicator">
+                ${currentWeek === 0 ? 'Settimana corrente' : 
+                 currentWeek === 1 ? 'Prossima settimana' : 
+                 `Settimana ${currentWeek + 1}`}
+            </span>
             <button 
                 class="pagination-btn" 
                 onclick="changeWeek(${currentWeek + 1})"
@@ -251,8 +265,6 @@ function renderPagination(currentWeek) {
             </button>
         </div>
     `;
-    
-    return paginationHtml;
 }
 
 function changeWeek(newWeek) {
@@ -265,34 +277,12 @@ function changeWeek(newWeek) {
 }
 
 function bookSlot(slotId, date, startTime, endTime) {
-    if (!confirm(`Vuoi prenotare la lezione di ${date} dalle ${startTime} alle ${endTime}?`)) {
-        return;
-    }
+    // Se non c'è ID (slot generato in tempo reale), creiamo i parametri per la prenotazione
+    // in base ai dati che abbiamo
+    let bookingParams = slotId ? 
+        `id=${slotId}` : 
+        `date=${date}&time_start=${startTime}&time_end=${endTime}&teacher=${encodeURIComponent(currentTeacherEmail)}`;
     
-    fetch('../api/book_lesson.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `teacher_email=${encodeURIComponent(currentTeacherEmail)}&date=${encodeURIComponent(date)}&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}`
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Errore nella risposta del server');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            alert('Lezione prenotata con successo!');
-            // Refresh the availability to reflect the booking
-            loadAvailability();
-        } else {
-            alert('Errore: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Si è verificato un errore durante la prenotazione: ' + error.message);
-    });
+    // Reindirizza alla pagina di prenotazione
+    window.location.href = `book_lesson.php?${bookingParams}`;
 }

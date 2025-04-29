@@ -1,4 +1,4 @@
-//FUNZIONA NON TOCCARE STO CAZZO DI FILE
+// FUNZIONA NON TOCCARE STO CAZZO DI FILE - Aggiornato per supporto in tempo reale
 
 // // Variabili globali
 let currentWeek = 0;
@@ -27,6 +27,102 @@ function initAvailability(data, days, weeks) {
     renderPaginationControls();
 }
 
+// Carica dinamicamente la disponibilità da Google Calendar
+function loadRealTimeAvailability() {
+    const loadingContainer = document.getElementById('weekContainer');
+    if (!loadingContainer) return;
+    
+    // Mostra un messaggio di caricamento
+    loadingContainer.innerHTML = `
+        <div class="loading-container">
+            <div class="spinner"></div>
+            <p>Caricamento disponibilità in tempo reale da Google Calendar...</p>
+        </div>
+    `;
+    
+    // Ottieni i dati dalle impostazioni
+    fetch('../api/get_calendar_availability.php')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Errore nella risposta del server');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Organize data by weeks
+                const availability = data.availability;
+                const now = new Date();
+                
+                // Calculate the start of the current week (Monday)
+                const currentDate = new Date(now);
+                const dayOfWeek = currentDate.getDay() || 7; // Convert 0 (Sunday) to 7
+                const diff = currentDate.getDate() - dayOfWeek + 1; // Adjust to start from Monday
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(diff);
+                startOfWeek.setHours(0, 0, 0, 0); // Reset time to start of day
+                
+                // Organize data by weeks and days
+                const groupedData = {};
+                
+                availability.forEach(slot => {
+                    const slotDate = new Date(slot.data);
+                    // Calculate how many weeks from the current week
+                    const timeDiff = slotDate.getTime() - startOfWeek.getTime();
+                    const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+                    const weekNum = Math.floor(daysDiff / 7);
+                    
+                    if (weekNum >= 0 && weekNum < 4) { // Limit to 4 weeks
+                        if (!groupedData[weekNum]) {
+                            groupedData[weekNum] = {};
+                        }
+                        
+                        const dayName = slot.giorno_settimana;
+                        
+                        if (!groupedData[weekNum][dayName]) {
+                            groupedData[weekNum][dayName] = [];
+                        }
+                        
+                        groupedData[weekNum][dayName].push(slot);
+                    }
+                });
+                
+                // Update global variables
+                availabilityData = groupedData;
+                maxWeeks = Object.keys(groupedData).length || 1;
+                
+                // Render the first week
+                renderWeek(0);
+                renderPaginationControls();
+                
+                // Aggiorna lo stato per indicare che è in tempo reale
+                const statusBoxes = document.querySelectorAll('.status-box');
+                statusBoxes.forEach(box => {
+                    if (box.querySelector('strong')) {
+                        box.querySelector('strong').textContent = "Google Calendar sincronizzato in tempo reale ✓";
+                    }
+                });
+                
+            } else {
+                loadingContainer.innerHTML = `
+                    <div class="error-container">
+                        <p class="error-message">Errore nel caricamento: ${data.message}</p>
+                        <button onclick="window.location.reload()" class="btn-primary">Riprova</button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            loadingContainer.innerHTML = `
+                <div class="error-container">
+                    <p class="error-message">Errore nella comunicazione con il server: ${error.message}</p>
+                    <button onclick="window.location.reload()" class="btn-primary">Riprova</button>
+                </div>
+            `;
+        });
+}
+
 // Sincronizzazione Google Calendar
 function syncGoogleCalendar() {
     const syncBtn = document.getElementById('syncBtn');
@@ -51,47 +147,8 @@ function syncGoogleCalendar() {
         syncStatus.textContent = 'Sincronizzazione in corso...';
     }
     
-    // Use direct path to API
-    fetch('../api/sync_google_calendar.php?nocache=' + new Date().getTime())
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (syncStatus) {
-                    syncStatus.textContent = 'Sincronizzazione completata! Aggiornamento pagina...';
-                }
-                // Force a hard refresh after successful sync
-                setTimeout(() => {
-                    window.location.href = window.location.pathname + '?refresh=' + new Date().getTime();
-                }, 1500);
-            } else {
-                if (syncStatus) {
-                    syncStatus.textContent = 'Errore: ' + data.message;
-                }
-                buttons.forEach(button => {
-                    if (button) {
-                        button.innerHTML = `
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google Calendar">
-                            Riprova
-                        `;
-                        button.disabled = false;
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            if (syncStatus) {
-                syncStatus.textContent = 'Errore: ' + error.message;
-            }
-            buttons.forEach(button => {
-                if (button) {
-                    button.innerHTML = `
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google Calendar">
-                        Riprova
-                    `;
-                    button.disabled = false;
-                }
-            });
-        });
+    // Ora carica direttamente in tempo reale invece di fare la sincronizzazione
+    loadRealTimeAvailability();
 }
 
 // Funzione per renderizzare i controlli di paginazione
@@ -276,10 +333,13 @@ function renderWeek(weekNumber) {
                               slot.stato === 'prenotata' ? 'status-booked' : 
                               slot.stato === 'completata' ? 'status-completed' : '';
             
+            const realTimeIcon = slot.from_google_calendar ? 
+                '<span class="realtime-badge" title="Sincronizzato in tempo reale con Google Calendar"><i class="fas fa-sync"></i></span>' : '';
+            
             html += `
                 <div class="time-slot">
                     <span class="time-range">${slot.ora_inizio} - ${slot.ora_fine}</span>
-                    <span class="slot-status ${statusClass}">${slot.stato}</span>
+                    <span class="slot-status ${statusClass}">${slot.stato} ${realTimeIcon}</span>
                 </div>
             `;
         });
@@ -303,5 +363,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const syncBtnEmpty = document.getElementById('syncBtnEmpty');
     if (syncBtnEmpty) {
         syncBtnEmpty.addEventListener('click', syncGoogleCalendar);
+    }
+    
+    // Aggiungi un tasto per caricare in tempo reale
+    const rtBtn = document.getElementById('realtimeBtn');
+    if (rtBtn) {
+        rtBtn.addEventListener('click', loadRealTimeAvailability);
+    }
+    
+    // Verifica la presenza del flag di caricamento in tempo reale
+    const useRealTimeData = document.body.getAttribute('data-realtime') === 'true';
+    if (useRealTimeData) {
+        loadRealTimeAvailability();
     }
 });
