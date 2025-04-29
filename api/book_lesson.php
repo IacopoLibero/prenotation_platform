@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once '../connessione.php';
+require_once '../google_calendar/calendar_functions.php';
 
 // Verify user is logged in as a student
 if (!isset($_SESSION['user']) || $_SESSION['tipo'] !== 'studente') {
@@ -40,6 +41,24 @@ try {
     $check_stmt->bind_param("sss", $teacher_email, $start_datetime, $end_datetime);
     $check_stmt->execute();
     $check_result = $check_stmt->get_result();
+    
+    // Get student name for calendar event
+    $student_query = "SELECT username FROM Studenti WHERE email = ?";
+    $student_stmt = $conn->prepare($student_query);
+    $student_stmt->bind_param("s", $student_email);
+    $student_stmt->execute();
+    $student_result = $student_stmt->get_result();
+    $student_name = $student_result->fetch_assoc()['username'] ?? 'Studente';
+    
+    // Get teacher name for calendar event
+    $teacher_query = "SELECT username FROM Professori WHERE email = ?";
+    $teacher_stmt = $conn->prepare($teacher_query);
+    $teacher_stmt->bind_param("s", $teacher_email);
+    $teacher_stmt->execute();
+    $teacher_result = $teacher_stmt->get_result();
+    $teacher_name = $teacher_result->fetch_assoc()['username'] ?? 'Insegnante';
+    
+    $lesson_id = 0;
     
     if ($check_result->num_rows === 0) {
         // Lesson doesn't exist, check if there's a availability slot
@@ -85,6 +104,8 @@ try {
             throw new Exception('Errore durante la prenotazione della lezione: ' . $insert_stmt->error);
         }
         
+        $lesson_id = $conn->insert_id;
+        
     } else {
         // Lesson exists, check if it's available
         $lesson = $check_result->fetch_assoc();
@@ -110,6 +131,65 @@ try {
         if (!$update_stmt->execute()) {
             throw new Exception('Errore durante la prenotazione della lezione: ' . $update_stmt->error);
         }
+        
+        $lesson_id = $lesson['id'];
+    }
+    
+    // Step 2: Create Google Calendar events if both users have connected their calendars
+    $teacherEventId = null;
+    $studentEventId = null;
+    
+    // Check if the teacher has Google Calendar integration
+    if (hasValidOAuthTokens($teacher_email, 'professore')) {
+        // Create event in teacher's calendar
+        $eventTitle = "Lezione con $student_name";
+        $eventDescription = "Lezione prenotata tramite la piattaforma.\n\n";
+        $eventDescription .= "Studente: $student_name ($student_email)\n";
+        $eventDescription .= "Data: " . date('d/m/Y', strtotime($date)) . "\n";
+        $eventDescription .= "Orario: $start_time - $end_time";
+        
+        $teacherEventResult = createCalendarEvent(
+            $teacher_email,
+            'professore',
+            $eventTitle,
+            $eventDescription,
+            $start_datetime,
+            $end_datetime,
+            [$student_email]
+        );
+        
+        if ($teacherEventResult['success']) {
+            $teacherEventId = $teacherEventResult['event_id'];
+        }
+    }
+    
+    // Check if the student has Google Calendar integration
+    if (hasValidOAuthTokens($student_email, 'studente')) {
+        // Create event in student's calendar
+        $eventTitle = "Lezione con $teacher_name";
+        $eventDescription = "Lezione prenotata tramite la piattaforma.\n\n";
+        $eventDescription .= "Insegnante: $teacher_name ($teacher_email)\n";
+        $eventDescription .= "Data: " . date('d/m/Y', strtotime($date)) . "\n";
+        $eventDescription .= "Orario: $start_time - $end_time";
+        
+        $studentEventResult = createCalendarEvent(
+            $student_email,
+            'studente',
+            $eventTitle,
+            $eventDescription,
+            $start_datetime,
+            $end_datetime,
+            [$teacher_email]
+        );
+        
+        if ($studentEventResult['success']) {
+            $studentEventId = $studentEventResult['event_id'];
+        }
+    }
+    
+    // Step 3: Save the event IDs if any were created
+    if ($teacherEventId || $studentEventId) {
+        saveCalendarEventIds($lesson_id, $teacherEventId, $studentEventId, $conn);
     }
     
     // Commit the transaction
@@ -119,7 +199,11 @@ try {
     header('Content-Type: application/json');
     echo json_encode([
         'success' => true, 
-        'message' => 'Lezione prenotata con successo!'
+        'message' => 'Lezione prenotata con successo!',
+        'calendar_events' => [
+            'teacher' => $teacherEventId ? true : false,
+            'student' => $studentEventId ? true : false
+        ]
     ]);
     
 } catch (Exception $e) {

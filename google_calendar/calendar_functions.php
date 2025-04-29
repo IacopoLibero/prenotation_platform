@@ -176,4 +176,186 @@ function revokeGoogleAccess($userEmail, $userType) {
         return false;
     }
 }
+
+/**
+ * Creates a calendar event for a lesson in the user's Google Calendar
+ * 
+ * @param string $userEmail Email of the user (teacher or student)
+ * @param string $userType Type of user ('professore' o 'studente')
+ * @param string $title Event title
+ * @param string $description Event description
+ * @param string $startTime Start time (Y-m-d H:i:s format)
+ * @param string $endTime End time (Y-m-d H:i:s format)
+ * @param array $attendees List of emails for attendees
+ * @param string $location Optional location
+ * @return array Response with success status, message, and event ID if successful
+ */
+function createCalendarEvent($userEmail, $userType, $title, $description, $startTime, $endTime, $attendees = [], $location = null) {
+    try {
+        $client = getAuthenticatedClient($userEmail, $userType);
+        
+        if (!$client) {
+            return [
+                'success' => false,
+                'message' => 'Utente non autenticato con Google Calendar'
+            ];
+        }
+        
+        $service = new Google_Service_Calendar($client);
+        
+        // Convert to DateTime objects
+        $startDateTime = new DateTime($startTime);
+        $endDateTime = new DateTime($endTime);
+        
+        // Create the event
+        $event = new Google_Service_Calendar_Event([
+            'summary' => $title,
+            'description' => $description,
+            'start' => [
+                'dateTime' => $startDateTime->format('Y-m-d\TH:i:s'),
+                'timeZone' => 'Europe/Rome',
+            ],
+            'end' => [
+                'dateTime' => $endDateTime->format('Y-m-d\TH:i:s'),
+                'timeZone' => 'Europe/Rome',
+            ]
+        ]);
+        
+        // Add location if provided
+        if ($location) {
+            $event->setLocation($location);
+        }
+        
+        // Add attendees if provided
+        if (!empty($attendees)) {
+            $eventAttendees = [];
+            foreach ($attendees as $attendeeEmail) {
+                $eventAttendees[] = ['email' => $attendeeEmail];
+            }
+            $event->setAttendees($eventAttendees);
+        }
+        
+        // Insert the event to the user's primary calendar
+        $calendarId = 'primary';
+        $createdEvent = $service->events->insert($calendarId, $event);
+        
+        return [
+            'success' => true,
+            'message' => 'Evento creato con successo nel calendario',
+            'event_id' => $createdEvent->getId()
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Errore nella creazione dell'evento: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Errore nella creazione dell\'evento: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Deletes a calendar event from the user's Google Calendar
+ * 
+ * @param string $userEmail Email of the user (teacher or student)
+ * @param string $userType Type of user ('professore' o 'studente')
+ * @param string $eventId Google Calendar event ID
+ * @return array Response with success status and message
+ */
+function deleteCalendarEvent($userEmail, $userType, $eventId) {
+    try {
+        $client = getAuthenticatedClient($userEmail, $userType);
+        
+        if (!$client) {
+            return [
+                'success' => false,
+                'message' => 'Utente non autenticato con Google Calendar'
+            ];
+        }
+        
+        $service = new Google_Service_Calendar($client);
+        
+        // Delete the event from the user's primary calendar
+        $service->events->delete('primary', $eventId);
+        
+        return [
+            'success' => true,
+            'message' => 'Evento eliminato con successo dal calendario'
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Errore nell'eliminazione dell'evento: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Errore nell\'eliminazione dell\'evento: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Saves Google Calendar event IDs for a lesson
+ * 
+ * @param int $lessonId ID of the lesson
+ * @param string $teacherEventId Google Calendar event ID for teacher
+ * @param string $studentEventId Google Calendar event ID for student
+ * @param object $conn Database connection
+ * @return bool Success status
+ */
+function saveCalendarEventIds($lessonId, $teacherEventId, $studentEventId, $conn) {
+    try {
+        $query = "UPDATE Lezioni SET 
+                  teacher_event_id = ?, 
+                  student_event_id = ? 
+                  WHERE id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("ssi", $teacherEventId, $studentEventId, $lessonId);
+        
+        return $stmt->execute();
+    } catch (Exception $e) {
+        error_log("Errore nel salvataggio degli ID evento: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Retrieves Google Calendar event IDs for a lesson
+ * 
+ * @param int $lessonId ID of the lesson
+ * @param object $conn Database connection
+ * @return array|null Array with event IDs or null if not found
+ */
+function getCalendarEventIds($lessonId, $conn) {
+    try {
+        $query = "SELECT teacher_event_id, student_event_id 
+                  FROM Lezioni 
+                  WHERE id = ?";
+        
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("i", $lessonId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows === 0) {
+            return null;
+        }
+        
+        return $result->fetch_assoc();
+    } catch (Exception $e) {
+        error_log("Errore nel recupero degli ID evento: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Checks if the user has valid OAuth tokens for Google Calendar
+ * 
+ * @param string $userEmail Email of the user
+ * @param string $userType Type of user ('professore' o 'studente')
+ * @return bool True if valid tokens exist, false otherwise
+ */
+function hasValidOAuthTokens($userEmail, $userType) {
+    $tokens = getOAuthTokens($userEmail, $userType);
+    return !empty($tokens) && !empty($tokens['refresh_token']);
+}
 ?>
